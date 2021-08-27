@@ -1,10 +1,9 @@
-function sse = objectivefcn(x,time_vector,active_force, reference_muscle_force, sim_dt)
+function sse = objectivefcn(x, X0, time_vector,active_force, reference_muscle_force, sim_dt)
 
 km = x(1);
 kt = x(2);
 m = x(3);
 c = x(4);
-X0 = [0,0];
 X = muscle_response(X0,time_vector, active_force, m, km,kt,c, sim_dt);
 estimated_muscle_force = X(:,1);
 

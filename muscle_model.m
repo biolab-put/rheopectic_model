@@ -53,7 +53,7 @@ reference_muscle_force(zeros_time/sim_dt:end) = zeros(1,round(((sim_time-zeros_t
 x0 = [km, kt, m, c];
 %options = optimset('GradObj', 'off' ,'Display', 'iter', 'HessUpdate', 'bfgs', 'GoalsExactAchieve',1);
 %x = fminlbfgs(@objectivefcn1, x0, options)
-x = fminsearch(@(x) objectivefcn(x, time_vector, active_force,reference_muscle_force, sim_dt),x0)
+x = fminsearch(@(x) objectivefcn(x,X0, time_vector, active_force,reference_muscle_force, sim_dt),x0)
 
 %% Plot result
 

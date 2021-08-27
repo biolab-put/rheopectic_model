@@ -2,10 +2,10 @@
 % dwie zmienne stanu x_1 = lm i x_2 = dlm/dt
 X0 = [0,0]; %stan pocz?tkowy, pocz?tkowe wyd?u?enie i pr?dko??
 sim_dt = 0.001; %interwa? czasowy
-sim_time = 0.9; %czas symulacji
+sim_time = 0.9+0.3; %czas symulacji
 time_vector = 0:sim_dt:sim_time-sim_dt;
-twitch_duration = 0.015;
-twitch_delay = 0.05;
+twitch_duration = 0.025;
+twitch_delay = 0.06;
 twitch_frequency = 0;
 twitch_amplitude = 10;
 km = 0.1;
@@ -41,10 +41,12 @@ plot(time_vector,active_force);
 trial_data = readtable('1006j_trial_0');
 reference_muscle_force = trial_data.force;
 stimulation = trial_data.stimDig;
-%force = (force - min(force)) / (max(force) - min(force));
-reference_muscle_force = reference_muscle_force(1:600);
-reference_muscle_force = reference_muscle_force - min(reference_muscle_force);
-reference_muscle_force = [reference_muscle_force; zeros(300,1)];
+zeros_time = sim_time - 0.5;
+reference_muscle_force = reference_muscle_force(1:sim_time/sim_dt);
+%reference_muscle_force = reference_muscle_force - min(reference_muscle_force);
+reference_muscle_force = reference_muscle_force - reference_muscle_force(1);
+reference_muscle_force(zeros_time/sim_dt:end) = zeros(1,round(((sim_time-zeros_time)/sim_dt)+1));
+
 
 %% Optimalization
 

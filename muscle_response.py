@@ -52,12 +52,12 @@ def load_data(filename):
 
 def muscle_state():
     sim_dt = 0.001
-    sim_time = 20
+    sim_time = 5.1
     zeros_time = 1.2 - 0.5 #sim_time - 0.5
     time_vector = np.arange(0,sim_time,sim_dt)
     twitch_duration = 0.025
-    twitch_delay = 2
-    twitch_frequency = 0.25
+    twitch_delay = 0
+    twitch_frequency = 4
     twitch_amplitude = 10
     km = 0.1848                   
     kt = 0.0087
@@ -67,42 +67,71 @@ def muscle_state():
 
 
     #active_force = twitch_amplitude * signal.unit_impulse(len(time_vector), (np.arange(twitch_delay+sim_dt,twitch_delay+twitch_duration,sim_dt)/sim_dt).astype(int))
-    active_force = parabolic_twitch(time_vector,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt)
-    print(len(active_force))
-    estimated_muscle_data = muscle_response(X0,time_vector, active_force,m,km,kt,c,sim_dt)
-    #muscle_test(X0,time_vector, active_force,m,km,kt,c,sim_dt)
-    #exit()
+ 
 
-    #print(estimated_muscle_data)
+    filenames = ['1006j_trial_0', '1006j_trial_5', '1006j_trial_0']
     
-    filename = '1006j_trial_0'
-    reference_data = load_data(f'./{filename}')
+    
+
+    reference_data = [load_data(f'./{filename}') for filename in filenames]
+    zeros = pd.DataFrame(np.zeros((2000,reference_data[0].shape[1])),columns=reference_data[0].columns)
+    reference_data[0]['force'] = reference_data[0]['force'] - reference_data[0]['force'][0]
+    reference_data[2]['force'] = reference_data[2]['force'] - reference_data[2]['force'][0]
+    reference_data[0] = reference_data[0][0:600]
+    reference_data[1] = reference_data[1][0:6000]
+    reference_data[2] = reference_data[2][0:600]
+
+    time_vector_twitch_start = np.arange(0,len(reference_data[0]['force']) *sim_dt,sim_dt)
+    active_force_twitch_start = parabolic_twitch(time_vector_twitch_start,twitch_duration,0.06,twitch_amplitude, 1, sim_dt)
+
+    time_vector_twitches_middle = np.arange(0,len(reference_data[1]['force']) *sim_dt,sim_dt)
+    active_force_twitches_middle = parabolic_twitch(time_vector_twitches_middle,twitch_duration,0.06,twitch_amplitude, twitch_frequency, sim_dt)
+    # HARDCORE FIX
+    active_force_twitches_middle[5200::] = 0
+
+    time_vector_twitch_stop = np.arange(0,len(reference_data[2]['force']) *sim_dt,sim_dt)
+    active_force_twitch_stop = parabolic_twitch(time_vector_twitch_stop,twitch_duration,0.06,twitch_amplitude, 1, sim_dt)
+
+    active_force = np.concatenate((active_force_twitch_start,zeros['force'].values, active_force_twitches_middle,zeros['force'].values, active_force_twitch_stop, zeros['force'].values))
+    reference_data = pd.concat([reference_data[0],zeros,reference_data[1],zeros,reference_data[2],zeros], ignore_index=True)
+    
+    time_vector = np.arange(0,len(reference_data['force'])*sim_dt,sim_dt)
+
+    plt.plot(time_vector, active_force)
+    plt.plot(time_vector, reference_data['stimDig'])
+
+    #plt.show()
     #reference_data = reference_data[reference_data['timestamp'] <= sim_time]
     #reference_data['force'][int(zeros_time/sim_dt)::] = 0
     #reference_force = pd.DataFrame(data = {'timestamp': time_vector, 'reference force' : reference_data['force'][0:int(sim_time/sim_dt)]})
     #reference_force['reference force'] = (refere
-    # nce_force['reference force'] - reference_force['reference force'][0])
+    # reference_force['reference force'] - reference_force['reference force'][0])
     #reference_force['reference force'][int(zeros_time/sim_dt)::] = 0
     
     #plt.plot(time_vector, active_force)
     #plt.show()
 
     #reference_force.plot(x='timestamp', y="reference force")
-    plt.plot(reference_data['force'])
-    plt.show()
-    exit()
-    estimated_muscle_data.plot(x="timestamp", y="estimated force")
-    plt.show()
-    exit()
 
-  
+    plt.plot(time_vector, reference_data['force'])
+    #plt.show()
+
+    estimated_muscle_data = muscle_response(X0,time_vector, active_force,m,km,kt,c,sim_dt)
+    #estimated_muscle_data.plot(x="timestamp", y="estimated force")
+    #plt.show()
     x0 = [km,kt,m,c]
+    #reference_force = reference_data['force']
+    reference_force = pd.DataFrame(data = {'timestamp': time_vector, 'reference force' : reference_data['force']})
     result = minimize(objective, x0, args = (X0, time_vector, active_force, sim_dt, reference_force), method='L-BFGS-B',bounds = ((0, None), (0, None),(0, None),(0, None)))#, jac=derivative)
     fitted_muscle_data = muscle_response(X0,time_vector, active_force,result.x[2],result.x[0],result.x[1],result.x[3],sim_dt)
     
 
-    ax = fitted_muscle_data.plot(x="timestamp", y="estimated force")
-    reference_force.plot(x='timestamp', y="reference force",ax=ax)
+    #ax = fitted_muscle_data.plot(x="timestamp", y="estimated force")
+    plt.plot(time_vector, fitted_muscle_data['estimated force'])
+    plt.legend(['Active force', 'Distribution of stimuli', 'Reference muscle force', 'Estimated muscle force'],loc ='upper right')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Force [N]')
+    #reference_force.plot(x='timestamp', y="reference force",ax=ax)
     print(result)
     plt.show()
     

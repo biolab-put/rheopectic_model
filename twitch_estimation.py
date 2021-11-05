@@ -12,10 +12,12 @@ from scipy.optimize import show_options
 from scipy.optimize import differential_evolution
 from scipy.optimize import NonlinearConstraint
 from scipy.integrate import ode
+from scipy.interpolate import interp1d
+from pyswarm import pso
 
 
-
-delta = 0.03 #30mm - początkowe wydłużenie mięśnia
+#delta = 0.03 #30mm - początkowe wydłużenie mięśnia
+delta = 0
 
 def objective(x, X0, time_vector, active_force, sim_dt, reference_force):
     km = x[0]
@@ -27,6 +29,9 @@ def objective(x, X0, time_vector, active_force, sim_dt, reference_force):
     muscle_data = ode_muscle_response(Y0, time_vector, active_force,m,km,kt,c,sim_dt)
     estimated_force = pd.DataFrame(data = {'timestamp': time_vector,'estimated force' : muscle_data['estimated force']})
     return np.sum((estimated_force['estimated force']-reference_force['reference force'])**2)
+
+def pso_objective(x, X0, time_vector, active_force, sim_dt, reference_force):
+    return -1 * objective(x, X0, time_vector, active_force, sim_dt, reference_force)
 
 def get_damping_ratio(km,kt,m,c):
     natural_frequency = np.sqrt(np.abs(kt+km)/np.abs(m))
@@ -46,11 +51,14 @@ def lm_constrain(x):
     delta_lm = kt * delta / (km+kt)
     return delta_lm 
 
+
+'''
+
 def kt_constrain(x):
     km = x[0]
     kt = x[1]
     return kt/km
-'''
+
 
 def damping_ratio_constrain(x):
     km = x[0]
@@ -59,6 +67,11 @@ def damping_ratio_constrain(x):
     c = x[3]
     damping_ratio = get_damping_ratio(km,kt,m,c)
     return damping_ratio
+
+def constraints(x, *_):
+    drc = damping_ratio_constrain(x)
+    #ktc = kt_constrain(x)
+    return [drc - 0.7, 1.1 - drc]#, ktc - 10, 1000 - ktc]
 
 def parabolic_twitch(t,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt):
     single_twitch_t = np.arange(0,twitch_duration,sim_dt)
@@ -78,9 +91,9 @@ def solve_muscle_dynamics(t,x, active_force,m,km,kt,c,sim_dt):
 
 
 def ode_muscle_response(X0,time_vector, active_force,m,km,kt,c,sim_dt):
-    solution = solve_ivp(solve_muscle_dynamics, t_span=[0, time_vector[-1]], y0=X0, t_eval = time_vector, args=(active_force, m, km,kt,c, sim_dt), method = 'LSODA',first_step = sim_dt, max_step = sim_dt, atol = 1e90, rtol= 1e90)
+    solution = solve_ivp(solve_muscle_dynamics, t_span=[0, time_vector[-1]], y0=X0, t_eval = time_vector, args=(active_force, m, km,kt,c, sim_dt), method = 'RK45',first_step = sim_dt, min_step = sim_dt, max_step = sim_dt, atol=1e-2, rtol=1e-2, vectorized=True)
     estimated_force = np.abs(kt) * (delta - solution.y[0,:])
-    estimated_force = estimated_force - estimated_force[0]
+    #estimated_force = estimated_force - estimated_force[0]
     return pd.DataFrame(data = {'timestamp': time_vector, 'estimated force': estimated_force, 'lm' : solution.y[0,:], 'dlm': solution.y[1,:]})
 
 def load_data(filename):
@@ -101,19 +114,20 @@ def c_from_damping_ratio(damping_ratio, m,kt,km):
     return  damping_ratio * 2 * m * np.sqrt((kt+km)/m)
 
 def muscle_state():
-    sim_dt = 0.001
-    sim_time = 1.2
-    zeros_time = 1.2 - 0.3 #sim_time - 0.5
+    sim_dt = 0.0001 # 10 khz
+    ode_dt = 0.001 # 1 kHz
+    sim_time = 0.12
+    zeros_time = 0.12 - 0.03 #sim_time - 0.5
     time_vector = np.arange(0,sim_time,sim_dt)
-    twitch_duration = 0.016
-    twitch_delay = 0.06
+    twitch_duration = 0.015
+    twitch_delay = 0.0025
     twitch_frequency = 0.5
-    twitch_amplitude = 1
-    km = 0.01
-    kt = 0.1
+    twitch_amplitude = 0.1
+    km = 1
+    kt = 12
     m = 0.002 #2mg
     damping_ratio = 0.9
-    damping_ratio_margin = 0.1
+    damping_ratio_margin = 0.2
     c = c_from_damping_ratio(damping_ratio,m,kt,km) #+0.02
     lm0 = kt * delta / (km+kt)
     lt0 = delta - lm0
@@ -125,9 +139,40 @@ def muscle_state():
     print('Poczatkowa dlugosc miesnia: ', lm0, '[m]')
     print('Poczatkowa dlugosc sciegna: ', lt0, '[m]')
 
-    active_force = parabolic_twitch(time_vector,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt)
+    active_force = parabolic_twitch(time_vector,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, ode_dt)
     
-    estimated_muscle_data = ode_muscle_response(X0,time_vector, active_force,m,km,kt,c,sim_dt)
+    # values from previous optimization
+    #km = 0.00860294
+    #kt = 0.0957913
+    #m = 0.0021715
+    #c = 0.02409118
+
+    #km = 0.00837928
+    #kt = 0.04999498
+    #m = 0.0012011
+    #c = 0.01339998
+
+    #km = 8.10410259e+00
+    #kt = 8.10568581e+01
+    #m = 6.99124787e-03
+    #c = 1.73689961e+00
+
+    # PSO RESULTS
+    km = 6.40889948e+00
+    kt = 5.12959476e+01
+    m = 8.13115821e-03
+    c = 1.18319005e+00
+
+    # PSO [9.16076251e+00 3.31078515e+01 3.41007340e-03 8.35212831e-01] 0.0015783457685658677 (0.017 twitch_duration and 0.004 twitch_delay)
+    # PSO [6.79317263e+00 4.06017304e+01 3.46767499e-03 8.91871020e-01] 0.0037533776571708143 (0.017 twitch_duration and 0.006 twitch_delay)
+    # PSO [3.62912280e+00 1.33733990e+01 2.02882717e-03 3.43716684e-01] 0.0003501636281563121 (0.017 twitch_duration and 0.002 twitch_delay)
+    # PSO [4.41060801e+00 3.52682251e+01 5.58968526e-03 8.13670605e-01] 0.0002971150771581179 (0.015 twitch_duration and 0.002 twitch_delay)
+    # PSO [6.40889948e+00 5.12959476e+01 8.13115821e-03 1.18319005e+00] 0.00029711195820206345 (0.015 twitch_duration and 0.0025 twitch_delay)
+    # PSO [2.35555531e+00 1.89258523e+01 2.99643717e-03 4.36480125e-01] 0.00029714532516407434 (0.015 twitch_duration and 0.0025 twitch_delay)
+    # PSO [9.89552279e-01 7.82424799e+00 1.07037398e-03 1.79310864e-01] 0.00046904761292792873 (0.015 twitch_duration and 0.003 twitch_delay)
+    # PSO [8.87313821e+00 3.26825442e+01 4.96117068e-03 8.39767443e-01] 0.0003501604757055098 (0.017 twitch_duration and 0.0025 twitch_delay)
+    # differential_evolution [7.49121262e+00, 5.99545852e+01, 9.50382918e-03, 1.38304692e+00] 0.00029711118979525576 (0.015 twitch_duration and 0.0025 twitch_delay)
+    estimated_muscle_data = ode_muscle_response(X0,time_vector, active_force,m,km,kt,c,ode_dt)
 
     
     filename = '1006j_trial_04'
@@ -142,25 +187,31 @@ def muscle_state():
     print('Czas opadania sygnalu referencyjnego: ', get_falling_time(reference_force['reference force'],sim_dt), '[s]')
     print('Czas opadania sygnalu estymowanego: ', get_falling_time(estimated_muscle_data['estimated force'],sim_dt), '[s]')
     
-    plt.plot(time_vector, reference_force['reference force'])
+    #plt.plot(time_vector, estimated_muscle_data['estimated force'])
+    #plt.plot(time_vector, reference_force['reference force'])
     #plt.plot(time_vector, estimated_muscle_data['lm'])
-    plt.plot(time_vector, estimated_muscle_data['estimated force'])
     #plt.plot(time_vector, active_force)
-    plt.show()
-    exit()
+    #plt.show()
+    #exit()
 
     x0 = [km,kt,m,c]
 
     drc = NonlinearConstraint(damping_ratio_constrain,damping_ratio - damping_ratio_margin, damping_ratio + damping_ratio_margin)
-   
-    result = differential_evolution(objective,x0 = x0, args = (X0, time_vector, active_force, sim_dt, reference_force),constraints=(drc), bounds = ((0.0001,0.01), (0.01,10),(0.0001,0.099),(0.001, 120)),disp= True)
-    #result = minimize(objective, x0, args = (X0, time_vector, active_force, sim_dt, reference_force), method='L-BFGS-B',bounds = ((0.1, 12000), (0.1, 200000000),(0.0001,0.99),(0.0001, 100)),tol=1e-12)#, jac=derivative)
-    print(result)
-    fitted_muscle_data = ode_muscle_response(X0,time_vector, active_force,result.x[2],result.x[0],result.x[1],result.x[3],sim_dt)
+    ktc = NonlinearConstraint(kt_constrain,10, 1000)
+    #result = differential_evolution(objective,x0 = x0, args = (X0, time_vector, active_force, ode_dt, reference_force),constraints=(drc), bounds = ((0.001,100), (0.01,100),(0.0001,0.0099),(0.001, 12)), workers = 2, disp= True)
+    #print(result)
+    xopt, fopt, p, pf = pso(objective, lb = (0.001, 0.01,0.0001,0.001), ub = (100, 100, 0.0099, 12), f_ieqcons = constraints,maxiter= 100, args = (X0, time_vector, active_force, ode_dt, reference_force), processes = 1, particle_output = True, debug = True)
+    #print(xopt)
+    #plt.plot(pf)
+    #plt.show()
+    #exit()
+    #result = minimize(objective, x0, args = (X0, time_vector, active_force, sim_dt, reference_force), method='L-BFGS-B',bounds = ((0.001,100), (0.01,100),(0.0001,0.0099),(0.001, 12)),tol=1e-12, options = {'disp' : True})#, jac=derivative)
+    #fitted_muscle_data = ode_muscle_response(X0,time_vector, active_force,result.x[2],result.x[0],result.x[1],result.x[3],ode_dt)
+    fitted_muscle_data = ode_muscle_response(X0,time_vector, active_force,xopt[2],xopt[0],xopt[1],xopt[3],ode_dt)
     ax = fitted_muscle_data.plot(x="timestamp", y="estimated force")
     reference_force.plot(x='timestamp', y="reference force",ax=ax)
     plt.show()
     
 
-
-muscle_state()
+if __name__ == '__main__': 
+    muscle_state()

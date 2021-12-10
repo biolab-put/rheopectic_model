@@ -1,3 +1,3 @@
 # rheopectic_model
 
-Run muscle_model.m
+Run object-oriented/muscle_simulation.py

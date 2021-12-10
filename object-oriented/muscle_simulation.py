@@ -73,7 +73,7 @@ def muscle_optimization():
     Fdelta_bound = (0.01,10)
     #bounds = (km_bound,kt_bound,m_bound,c_bound)
     bounds = (km_bound,kt_bound,m_bound,c_bound,FK_bound,Fdelta_bound)
-    threads = 6
+    threads = 3
     damping_ratio = 1.
     damping_ratio_margin = 0.1
 

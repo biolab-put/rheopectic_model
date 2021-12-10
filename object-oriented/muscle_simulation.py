@@ -53,9 +53,9 @@ def muscle_optimization():
     # muscle parameters
     sim_dt = 0.0001
     twitch_duration = 0.015
-    twitch_delay = 0.005
+    twitch_delay = 0.004
     twitch_frequency = 40
-    twitch_amplitude = 0.1
+    twitch_amplitude = 1
     km = 0.1
     kt = 1
     m = 0.002
@@ -69,7 +69,7 @@ def muscle_optimization():
     kt_bound = (0.0001,1000)
     m_bound = (0.0001,0.0799)
     c_bound = (0.001,120)
-    FK_bound = (0.1,20)
+    FK_bound = (0.01,10)
     Fdelta_bound = (0.01,10)
     #bounds = (km_bound,kt_bound,m_bound,c_bound)
     bounds = (km_bound,kt_bound,m_bound,c_bound,FK_bound,Fdelta_bound)

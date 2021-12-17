@@ -29,9 +29,12 @@ class hill_muscle_model:
             solver.integrate(time_vector[n])
             assert solver.successful()
             solution[:,n] = solver.y
-        estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:])
-        estimated_force = self.F_delta / (1 + np.exp(-self.F_K*(estimated_force-0)))
+        estimated_force = np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:]) * 10
+        #estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:])
         estimated_force = estimated_force - estimated_force[0]
+        #estimated_force = 1 / (1 + np.exp(-self.F_K*(estimated_force-self.F_delta)))
+        
+        #estimated_force = estimated_force - estimated_force[0]
         return estimated_force
 
     '''
@@ -88,20 +91,25 @@ class hill_muscle_model:
         kt = x[1]
         return kt/km
 
-
     def get_initial_length(self):
         return self.kt * self.delta / (self.km + self.kt)
 
+    def get_X0(self):
+        lm0 = self.get_initial_length()
+        X0 = [lm0,0]
+        return X0
+
 class rheopectic_hill_muscle_model(hill_muscle_model):
     # TODO: OVERWRITE METHODS
-    def __init__(self, km,kt,m,c0,min_c,max_c,k1,k2,A,B,C,D,delta,sim_dt):
-        super().__init__(km = km,kt = kt,m = m,c=0, delta = delta, sim_dt = sim_dt)
+    def __init__(self, km,kt,m,c0,min_c,max_c,k1,k2,A,B,C,D,lambda0,delta,sim_dt):
+        super().__init__(km = km,kt = kt,m = m,c=0, F_K = 0, F_delta = 0, delta = delta, sim_dt = sim_dt)
         self.k1 = k1
         self.k2 = k2
         self.A = A
         self.B = B
         self.C = C
         self.D = D
+        self.lambda0 = lambda0
         self.c0 = c0
         self.min_c = min_c
         self.max_c = max_c
@@ -115,5 +123,30 @@ class rheopectic_hill_muscle_model(hill_muscle_model):
         d2lm_dt = 1/self.m*(-c*dlm_dt-self.km*lm+self.kt*(self.delta-lm)-active_force[int(t/self.sim_dt)])
         return [dlm_dt,d2lm_dt,dLambda_dt]
 
+    def set_parameters(self,min_c,k1,C,D,c0,lambda0):
+        self.min_c = min_c
+        self.k1 = k1
+        self.C = C
+        self.D = D
+        self.c0 = c0
+        self.lambda0 = lambda0
+
+    def set_parameters(self,x):
+        self.min_c = x[0]
+        self.k1 = x[1]
+        self.C = x[2]
+        self.D = x[3]
+        self.c0 = x[4]
+        self.lambda0 = x[5]
+        self.max_c = x[6]
+
+    def get_parameters(self):
+        x = [self.min_c,self.k1,self.C,self.D,self.c0,self.lambda0,self.max_c]
+        return x
+
+    def get_X0(self):
+        lm0 = self.get_initial_length()
+        X0 = [lm0,0,self.lambda0]
+        return X0
 
 

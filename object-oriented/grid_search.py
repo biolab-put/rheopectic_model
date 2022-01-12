@@ -69,14 +69,14 @@ def rheopectic_muscle_grid_search(parameters):
     #F_delta = 1
     c0 = 0
     min_c = 0.3
-    max_c = 20
-    k1 = 10
-    k2 = 10
+    max_c = 120
+    k1 = 30
+    k2 = 50
     A = 1
     B = 1.5
-    C = 4
+    C = 2
     D = 2
-    lambda0 = 0.12
+    lambda0 = 0.5
     #startowac z wiekszej lambdy,nasycenie obserwowac na wykresie lambdy, dodac wykres lambdy
     #muscle_model = hill_muscle_model(km,kt,m,2.27624249e+00,0,0,delta,sim_dt)
     muscle_model = rheopectic_hill_muscle_model(km,kt,m,c0,min_c,max_c,k1,k2,A,B,C,D,lambda0,delta,sim_dt)

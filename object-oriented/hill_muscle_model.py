@@ -29,13 +29,14 @@ class hill_muscle_model:
             solver.integrate(time_vector[n])
             assert solver.successful()
             solution[:,n] = solver.y
+            #solution[2,n] = np.max([0.0, np.min([1.0, solution[2,n]])])
         estimated_force = np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:]) * 10
         #estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:])
         estimated_force = estimated_force - estimated_force[0]
         #estimated_force = 1 / (1 + np.exp(-self.F_K*(estimated_force-self.F_delta)))
         
         #estimated_force = estimated_force - estimated_force[0]
-        return estimated_force
+        return estimated_force,solution
 
     '''
     def muscle_response(self,X0,time_vector,active_force,F_K = 0,F_delta = 0):
@@ -69,6 +70,11 @@ class hill_muscle_model:
         self.c = x[3]
         self.F_K = x[4]
         self.F_delta = x[5]
+    
+    def set_parameter(self, parameter, value):
+        old_parameter_value = getattr(self, parameter)
+        setattr(self, parameter,value)
+        return old_parameter_value
 
     def get_parameters(self):
         x = [self.km,self.kt,self.m,self.c,self.F_K,self.F_delta]
@@ -116,10 +122,21 @@ class rheopectic_hill_muscle_model(hill_muscle_model):
 
     def _solve_muscle_dynamics(self,t,X,active_force):
         lm, dlm_dt, Lambda = X
-        Lambda = np.max([0.0, np.min([1.0, Lambda])])
+        #Lambda = np.max([0.0, np.min([1.0, Lambda])])
         dLambda_dt = -self.k1*np.sign(dlm_dt)*(np.abs(dlm_dt)**(self.A))*(Lambda**(self.B))+self.k2*np.sign(dlm_dt)*(np.abs(dlm_dt)**(self.C))*((1-Lambda)**(self.D))
+        if(Lambda >= 1.0 and dLambda_dt > 0.0):
+            Lambda = 1.0
+            dLambda_dt = 0.0
+        elif(Lambda <= 0.0 and dLambda_dt < 0.0):
+            Lambda = 0.0
+            dLambda_dt = 0.0
+        #print(np.abs(dlm_dt))
         K = 1 - np.sqrt(self.max_c/self.min_c)
         c = self.max_c/((1 - K * Lambda)**2) + self.c0
+        #print(c)
+
+        #Fd = -c*dlm_dt
+        #Fd = Lambda * 1 + Lambda * self.max_c * dlm_dt + self.min_c*dlm_dt
         d2lm_dt = 1/self.m*(-c*dlm_dt-self.km*lm+self.kt*(self.delta-lm)-active_force[int(t/self.sim_dt)])
         return [dlm_dt,d2lm_dt,dLambda_dt]
 

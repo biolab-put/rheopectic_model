@@ -46,15 +46,23 @@ class muscle_active_force:
             full_twitch_t = np.arange(0,(1/twitch_frequency),sim_dt)
             pulse = np.zeros(len(full_twitch_t))
             single_pulse = np.zeros(len(single_twitch_t))
-            single_pulse[np.arange(m/sim_dt,a/sim_dt,1,dtype = int)] = (single_twitch_t[np.arange(m/sim_dt,a/sim_dt,1,dtype = int)] - m) / (a - m)
-            single_pulse[np.arange(b/sim_dt,r/sim_dt,1,dtype = int)] = (r - single_twitch_t[np.arange(b/sim_dt,r/sim_dt,1,dtype = int)]) / (r - b)
+            single_pulse[np.arange(m/sim_dt,a/sim_dt,1,dtype = int)] = twitch_amplitude * (single_twitch_t[np.arange(m/sim_dt,a/sim_dt,1,dtype = int)] - m) / (a - m)
+            single_pulse[np.arange(b/sim_dt,r/sim_dt,1,dtype = int)] = twitch_amplitude * (r - single_twitch_t[np.arange(b/sim_dt,r/sim_dt,1,dtype = int)]) / (r - b)
             single_pulse[np.arange(a/sim_dt,b/sim_dt,1,dtype = int)] = twitch_amplitude
             pulse[0:len(single_twitch_t)] = single_pulse
             twitch_train = cls._generate_wave(t,pulse,twitch_delay, twitch_frequency, sim_dt)
             return twitch_train
-        
-        @classmethod
-        def exp_twitch(cls,t,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt):
+        @staticmethod
+        def sigmoid_twitch(t,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt):
+            single_twitch_t = np.arange(0,twitch_duration+twitch_delay,sim_dt)
+            #pulse =  twitch_amplitude*((1/ (1+np.exp(-10000*(single_twitch_t)))) + (0.5/ (1+np.exp(1000*(single_twitch_t-twitch_duration)))))-twitch_amplitude
+            pulse = twitch_amplitude * (1/(1+np.exp(-10000*(single_twitch_t-twitch_delay-twitch_delay/2.5)))) * (1/(1+(np.exp(500*(single_twitch_t-twitch_duration-twitch_delay)))))
+            #pulse = pulse[pulse>=0.75*twitch_amplitude]
+            plt.plot(pulse)
+            plt.show()
+            exit()
+
+        def exp_twitch(t,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt):
             single_twitch_t = np.arange(0,twitch_duration,sim_dt)
             pulse = (1 - np.exp(-single_twitch_t/0.00005))*(1/(1+np.exp(700*(single_twitch_t-twitch_duration/10))))
             #pulse = (1 - np.exp(-single_twitch_t/0.00005))*(1/(1+np.exp(1900*(single_twitch_t-twitch_duration/2))))

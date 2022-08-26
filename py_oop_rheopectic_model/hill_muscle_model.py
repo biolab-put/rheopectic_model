@@ -157,7 +157,8 @@ class modified_hill_muscle_model():
             except AssertionError as e:
                 solution = np.zeros((len(X0),len(time_vector)))
             
-        estimated_force = np.sign(self.delta - solution[0,:]) * np.abs(self.delta - solution[0,:]) * 10
+        #estimated_force = np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) **2) * 1000
+        estimated_force = np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:])) * 10
         estimated_force = estimated_force - estimated_force[0]
         estimated_force = np.clip(estimated_force,0,None)
         return estimated_force,solution
@@ -223,13 +224,19 @@ class rheopectic_modified_hill_muscle_model(modified_hill_muscle_model):
         kt = x[7]
         return kt/km
 
+    def _get_dls_dt(self, current_ls, current_active_force):
+        dls_dt = 1/self.cs * (-(self.ks * current_ls) + current_active_force)
+        return dls_dt
+
     def _solve_muscle_dynamics(self,t,X,active_force):
         lm, dlm_dt, Lambda,ls = X
         Lambda = np.clip(Lambda,0,1)
         dlm_dt_temp = np.max([0,dlm_dt])
         dLambda_dt = -self.k1 * (dlm_dt_temp**self.A) * (Lambda**self.B) + self.k2 *(dlm_dt_temp**self.C) * (1-Lambda)**(self.D)
-        dls_dt = 1/self.cs * (-(self.ks * ls) + active_force[int(t/self.sim_dt)])
-        d2lm_dt = 1/self.m*(-(self.c_rh * Lambda * dlm_dt + self.c_rh_min * dlm_dt + self.c1 * dls_dt) -self.km*lm+self.kt*(self.delta-lm)-active_force[int(t/self.sim_dt)] - self.F0)
+        #dls_dt = 1/self.cs * (-(self.ks * ls) + active_force[int(t/self.sim_dt)])
+        dls_dt = self._get_dls_dt(ls,active_force[int(t/self.sim_dt)])
+        d2lm_dt = 1/self.m*(-(self.c_rh * Lambda * dlm_dt + self.c_rh_min * dlm_dt + self.c1 * dls_dt) - self.km*(lm**2)+self.kt*((self.delta-lm)**2)-active_force[int(t/self.sim_dt)] - self.F0)
+        #d2lm_dt = 1/self.m*(-self.c_rh/5*dlm_dt-self.km*(lm**2)+self.kt*((self.delta-lm)**2)-active_force[int(t/self.sim_dt)])
         return [dlm_dt,d2lm_dt,dLambda_dt,dls_dt]
 
     def set_parameters(self,x):
@@ -249,17 +256,19 @@ class rheopectic_modified_hill_muscle_model(modified_hill_muscle_model):
         self.D = x[12]
         self.F0 = x[13]
         '''
-        self.km = x[0]
-        self.kt = x[1]
-        self.c1 = x[2]
+        self.c1 = x[0]
+        self.cs = x[1]
+        self.ks = x[2]
 
     def get_parameters(self):
         #x = [self.k1,self.k2,self.c_rh,self.c_rh_min,self.ls0,self.c1,self.cs,self.ks,self.lambda0,self.A,self.B,self.C,self.D,self.F0]
-        x = [self.km,self.kt, self.c1]
+        x = [self.c1,self.cs, self.ks]
         return x
 
     def get_initial_length(self):
-        return (self.kt * self.delta - self.F0) / (self.kt + self.km)
+        dls0 = self._get_dls_dt(self.ls0,0)
+        return (self.kt * self.delta - self.c1 * dls0) / (self.kt + self.km)
+        #return (self.kt * self.delta - self.F0) / (self.kt + self.km)
         #return (self.kt * self.delta - self.F0 - self.c2 * self.lambda0) / (self.kt + self.km)
 
     def get_X0(self):

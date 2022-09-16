@@ -157,8 +157,8 @@ class modified_hill_muscle_model():
             except AssertionError as e:
                 solution = np.zeros((len(X0),len(time_vector)))
             
-        #estimated_force = np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) **2) * 1000
-        estimated_force = np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:])) * 10
+        estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) **2) / 10
+        #estimated_force = self.kt * (np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) ** (1)) + np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) ** (1))) * 10
         estimated_force = estimated_force - estimated_force[0]
         estimated_force = np.clip(estimated_force,0,None)
         return estimated_force,solution
@@ -240,7 +240,6 @@ class rheopectic_modified_hill_muscle_model(modified_hill_muscle_model):
         return [dlm_dt,d2lm_dt,dLambda_dt,dls_dt]
 
     def set_parameters(self,x):
-        '''
         self.k1 = x[0]
         self.k2 = x[1]
         self.c_rh = x[2]
@@ -255,19 +254,36 @@ class rheopectic_modified_hill_muscle_model(modified_hill_muscle_model):
         self.C = x[11]
         self.D = x[12]
         self.F0 = x[13]
+        self.km = x[14]
+        self.kt = x[15]
+        
         '''
         self.c1 = x[0]
         self.cs = x[1]
         self.ks = x[2]
+        '''
 
     def get_parameters(self):
-        #x = [self.k1,self.k2,self.c_rh,self.c_rh_min,self.ls0,self.c1,self.cs,self.ks,self.lambda0,self.A,self.B,self.C,self.D,self.F0]
-        x = [self.c1,self.cs, self.ks]
+        x = [self.k1,self.k2,self.c_rh,self.c_rh_min,self.ls0,self.c1,self.cs,self.ks,self.lambda0,self.A,self.B,self.C,self.D,self.F0,self.km,self.kt]
+        #x = [self.c1,self.cs, self.ks]
         return x
 
     def get_initial_length(self):
         dls0 = self._get_dls_dt(self.ls0,0)
-        return (self.kt * self.delta - self.c1 * dls0) / (self.kt + self.km)
+
+        a = self.km + self.kt
+        b = 2 * self.kt * self.delta
+        c = -self.kt*(self.delta**2) - self.c1 * dls0
+        quadratic_discriminant = b**2 - 4 * a * c
+        lm01 = (-b + quadratic_discriminant**(1/2)) / (2 * a)
+        lm02 = (-b - quadratic_discriminant**(1/2)) / (2 * a)
+        if((lm01 > 0 and lm02 > 0) or (lm01 < 0 and lm02 < 0)):
+            return False
+        if (lm01 > 0):
+            return lm01
+        if (lm02 > 0):
+            return lm02
+        #return (self.kt * self.delta - self.c1 * dls0) / (self.kt + self.km)
         #return (self.kt * self.delta - self.F0) / (self.kt + self.km)
         #return (self.kt * self.delta - self.F0 - self.c2 * self.lambda0) / (self.kt + self.km)
 

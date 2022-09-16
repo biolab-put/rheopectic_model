@@ -43,18 +43,27 @@ def print_state(xk, convergence):
     disp_debug = True
     muscle_model = create_rheopectic_modified_model(sim_dt)
 
-    filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_07','947kLHLf/947kLHLf_trial_17']
+    #filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_07','947kLHLf/947kLHLf_trial_17']
     
-    reference_force_0 = prepare_reference_data_in(filenames[0],sim_dt,steady_time=0.075,zeros_time=3.5)
-    reference_force_1 = prepare_reference_data_in(filenames[1],sim_dt,steady_time=1.5,zeros_time=0.3)
-    reference_force_2 = prepare_reference_data_in(filenames[2],sim_dt,steady_time=1.5,zeros_time=0.3)
+    #reference_force_0 = prepare_reference_data_in(filenames[0],sim_dt,steady_time=0.075,zeros_time=3.5)
+    #reference_force_1 = prepare_reference_data_in(filenames[1],sim_dt,steady_time=1.5,zeros_time=0.3)
+    #reference_force_2 = prepare_reference_data_in(filenames[2],sim_dt,steady_time=1.5,zeros_time=0.3)
 
-    reference_forces = [reference_force_0['force'],reference_force_1['force'],reference_force_2['force']]
-    time_vector_00 = np.arange(0,len(reference_forces[0])*sim_dt,sim_dt)
-    time_vector_0 = np.arange(0,len(reference_forces[1])*sim_dt,sim_dt)
-    time_vector_1 = np.arange(0,len(reference_forces[2])*sim_dt,sim_dt)
+    #reference_forces = [reference_force_0['force'],reference_force_1['force'],reference_force_2['force']
+    #--------------------------
+    LEN = 18889
+    time_vector_1 = np.arange(0,LEN*sim_dt,sim_dt)
+    time_vectors = []
+    time_vectors.append(0)
+    time_vectors.append(0)
+    time_vectors.append(time_vector_1)
+    #--------------------------
+    #time_vector_00 = np.arange(0,len(reference_forces[0])*sim_dt,sim_dt)
+    #time_vector_0 = np.arange(0,len(reference_forces[1])*sim_dt,sim_dt)
+    #time_vector_1 = np.arange(0,len(reference_forces[2])*sim_dt,sim_dt)
 
-    input_0 = muscle_active_force.parabolic_twitch(time_vector_00,twitch_duration,twitch_delay,twitch_amplitude, 1, sim_dt)
+    
+    #input_0 = muscle_active_force.parabolic_twitch(time_vector_00,twitch_duration,twitch_delay,twitch_amplitude, 1, sim_dt)
     low_freq_duration = int((19 * ((1/low_frequency - sim_dt/1.5)))/sim_dt)
     
     high_freq_duration = int((23 * ((1/high_frequency + sim_dt/1.5)))/sim_dt)
@@ -62,19 +71,26 @@ def print_state(xk, convergence):
     input_1_high_freq = muscle_active_force.parabolic_twitch(time_vector_1[low_freq_duration:low_freq_duration+high_freq_duration],twitch_duration,twitch_delay,twitch_amplitude, high_frequency, sim_dt)
     input_1_low_freq_end = muscle_active_force.parabolic_twitch(time_vector_1[low_freq_duration+high_freq_duration:2*low_freq_duration+high_freq_duration],twitch_duration,twitch_delay,twitch_amplitude, low_frequency, sim_dt)
 
-    input_1a = muscle_active_force.parabolic_twitch(time_vector_0,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt)
-    input_1a[int(0.525/sim_dt)::]=0 # to be the same like the orginal signal
+    #input_1a = muscle_active_force.parabolic_twitch(time_vector_0,twitch_duration,twitch_delay,twitch_amplitude, twitch_frequency, sim_dt)
+    #input_1a[int(0.525/sim_dt)::]=0 # to be the same like the orginal signal
 
     zeros = np.zeros([len(time_vector_1)-(2*low_freq_duration+high_freq_duration)])
     input_1 = np.concatenate((input_1_low_freq, input_1_high_freq,input_1_low_freq_end,zeros), axis=0)
-    time_vectors = [time_vector_00,time_vector_0,time_vector_1]
-    active_forces = [input_0,input_1a,input_1]
+    #--------------------------
+    active_forces = []
+    active_forces.append(0)
+    active_forces.append(0)
+    active_forces.append(input_1)
+    #--------------------------
+    #time_vectors = [time_vector_00,time_vector_0,time_vector_1]
+    #active_forces = [input_0,input_1a,input_1]
 
-    reference_stim_dig = np.copy(reference_force_1['stimDig'])
-    reference_stim_dig[reference_stim_dig == 0] = np.nan
+    #reference_stim_dig = np.copy(reference_force_1['stimDig'])
+    #reference_stim_dig[reference_stim_dig == 0] = np.nan
     muscle_model.set_parameters(xk)
     X0 = muscle_model.get_X0()
     print(xk)
+    fitted_muscle_data_1,[lm, dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     fitted_muscle_data_1,[lm, dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     plt.close('all')
     fig, axs = plt.subplots(1)
@@ -82,9 +98,9 @@ def print_state(xk, convergence):
     axs.plot(time_vectors[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)], fitted_muscle_data_1[int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])
     axs.plot(time_vectors[2][int(1.395/muscle_model.sim_dt)::], fitted_muscle_data_1[int(1.395/muscle_model.sim_dt)::])
 
-    axs.plot(time_vectors[2][0:int(0.95/muscle_model.sim_dt)], reference_forces[2][0:int(0.95/muscle_model.sim_dt)])
-    axs.plot(time_vectors[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)], reference_forces[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])
-    axs.plot(time_vectors[2][int(1.395/muscle_model.sim_dt)::], reference_forces[2][int(1.395/muscle_model.sim_dt)::])
+    #axs.plot(time_vectors[2][0:int(0.95/muscle_model.sim_dt)], reference_forces[2][0:int(0.95/muscle_model.sim_dt)])
+    #axs.plot(time_vectors[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)], reference_forces[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])
+    #axs.plot(time_vectors[2][int(1.395/muscle_model.sim_dt)::], reference_forces[2][int(1.395/muscle_model.sim_dt)::])
     plt.pause(0.0001)
 
 
@@ -99,10 +115,10 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
     reference_force_derative = np.gradient(filtered_reference,muscle_model.sim_dt)
     estimated_force_derative = np.gradient(filtered_estimated_force,muscle_model.sim_dt)
 
-    error += 10000/len(muscle_data) * np.sum((muscle_data[0:int(0.16/muscle_model.sim_dt)] - reference_force[0:int(0.16/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
-    error += 10000/len(muscle_data) * np.sum((muscle_data[int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)] - reference_force[int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
-    error += 5000/len(muscle_data) * np.sum((muscle_data[int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)] - reference_force[int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
-    error += 1000/len(muscle_data) * np.sum((muscle_data[int(1.395/muscle_model.sim_dt)::] - reference_force[int(1.395/muscle_model.sim_dt)::])**2)*muscle_model.sim_dt
+    error += 2000/len(muscle_data) * np.sum((muscle_data[0:int(0.16/muscle_model.sim_dt)] - reference_force[0:int(0.16/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
+    error += 2000/len(muscle_data) * np.sum((muscle_data[int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)] - reference_force[int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
+    error += 25000/len(muscle_data) * np.sum((muscle_data[int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)] - reference_force[int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])**2)*muscle_model.sim_dt
+    error += 500/len(muscle_data) * np.sum((muscle_data[int(1.395/muscle_model.sim_dt)::] - reference_force[int(1.395/muscle_model.sim_dt)::])**2)*muscle_model.sim_dt
     #print('Err: ', error)
     #print('Derr: ', 1/len(reference_force_derative) * np.sum((reference_force_derative - estimated_force_derative)**2)*muscle_model.sim_dt)
     error += 1/len(reference_force_derative) * np.sum((reference_force_derative - estimated_force_derative)**2)*muscle_model.sim_dt
@@ -704,8 +720,8 @@ def rheopectic_modified_muscle_optimization():
 
     #bounds = (min_c_bound,k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,max_c_bound)
     #bounds = (k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,cs_bound,ks_bound,ls0_bound)
-    #bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,F0_bound,twitch_duration_bound,twitch_amplitude_bound)
-    bounds = (c1_bound, cs_bound,ks_bound)
+    bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,F0_bound,km_bound,kt_bound)
+    #bounds = (c1_bound, cs_bound,ks_bound)
     threads = 12
     damping_ratio = 1.
     damping_ratio_margin = 0.1
@@ -760,6 +776,7 @@ def rheopectic_modified_muscle_optimization():
     reference_force_derative = np.gradient(filtered_reference,muscle_model.sim_dt)
     
     
+    '''
     plt.plot(time_vectors[2][0:int(0.16/muscle_model.sim_dt)], muscle_data[0:int(0.16/muscle_model.sim_dt)])
     plt.plot(time_vectors[2][int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)], muscle_data[int(0.16/muscle_model.sim_dt):int(0.95/muscle_model.sim_dt)])
     #plt.plot(time_vectors[2][0:int(0.95/muscle_model.sim_dt)], muscle_data[0:int(0.95/muscle_model.sim_dt)])
@@ -770,14 +787,14 @@ def rheopectic_modified_muscle_optimization():
     plt.plot(time_vectors[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)], reference_forces[2][int(0.95/muscle_model.sim_dt):int(1.395/muscle_model.sim_dt)])
     plt.plot(time_vectors[2][int(1.395/muscle_model.sim_dt)::], reference_forces[2][int(1.395/muscle_model.sim_dt)::])
     
-    plt.figure()
+    #plt.figure()
     #plt.plot(reference_force_2['stimDig'])
-    plt.plot(active_forces[2])
-    viscosity = muscle_model.c_rh * Lambda * dlm_dt + muscle_model.c_rh_min * dlm_dt
+    #plt.plot(active_forces[2])
+    #viscosity = muscle_model.c_rh * Lambda * dlm_dt + muscle_model.c_rh_min * dlm_dt
     #plt.plot(viscosity)
     plt.show()
     exit()
-    
+    '''
 
     # Optimize
     twitch_data = (twitch_duration,twitch_amplitude)
@@ -840,10 +857,10 @@ def create_rheopectic_model(simulation_dt):
 
 def create_rheopectic_modified_model(simulation_dt):
     sim_dt = simulation_dt
-    km = 8.21688727e+00 * 150 #  * 1.1 
-    kt = 5.45036325e+01 * 250 # / 1.2
+    km = 8.21688727e+00 * 400 #  * 1.1 
+    kt = 5.45036325e+01 * 125 # / 1.2
     m = 2.86717809e-02 
-    cs = 1.35102053e+01 * 2
+    cs = 1.35102053e+01 * 2 
     ks = 2.45926152e+02 * 1 
     ls0 = -0.0001
     A = 1
@@ -875,6 +892,10 @@ def rheopectic_modified_muscle_simulation():
 
 
     muscle_model = create_rheopectic_modified_model(sim_dt)
+    muscle_model.set_parameters([4.13523050e+02,  2.92725296e+05,  1.03744710e+01,  7.71788172e+00,
+       -3.00236148e-04,  1.83037824e+02,  1.91310804e+02,  1.23245739e+03,
+        3.66355415e-01,  1.62732500e+00,  2.91315338e+00,  2.37848273e+01,
+        3.07559988e+00,  0.00000000e+00,  2.79310311e+03,  6.43633073e+03])
 
     # prepare input data
     low_freq_duration = int((19 * ((1/low_frequency - sim_dt/1.5)))/sim_dt)
@@ -895,7 +916,7 @@ def rheopectic_modified_muscle_simulation():
     muscle_force,[lm, dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vector,active_force)
     stop = time()
     print('Time ', stop-start)
-    print(np.mean(muscle_model.test))
+    #print(np.mean(muscle_model.test))
     B, A = signal.butter(3, 0.003, output='ba')
     fig, axs = plt.subplots(2)
     axs[0].plot(time_vector, muscle_force)
@@ -923,5 +944,5 @@ if __name__=="__main__":
     #rheopectic_muscle_optimization()
     #modified_muscle_simulation()
     #modified_muscle_optimization()
-    #rheopectic_modified_muscle_simulation()
-    rheopectic_modified_muscle_optimization()
+    rheopectic_modified_muscle_simulation()
+    #rheopectic_modified_muscle_optimization()

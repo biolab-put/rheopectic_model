@@ -715,14 +715,15 @@ def rheopectic_modified_muscle_optimization():
     ls0_bound = (muscle_model.ls0/10,muscle_model.ls0*10)
     twitch_duration_bound = (0.001,0.012)
     twitch_amplitude_bound = (0.01,100)
+    sg_bound = (0.01,100)
     #km_bound = (0.1,5000)
     #kt_bound = (0.1,5000)
 
     #bounds = (min_c_bound,k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,max_c_bound)
     #bounds = (k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,cs_bound,ks_bound,ls0_bound)
-    bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,F0_bound,km_bound,kt_bound)
+    bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,F0_bound,km_bound,kt_bound,sg_bound)
     #bounds = (c1_bound, cs_bound,ks_bound)
-    threads = 12
+    threads = 4
     damping_ratio = 1.
     damping_ratio_margin = 0.1
 
@@ -857,8 +858,8 @@ def create_rheopectic_model(simulation_dt):
 
 def create_rheopectic_modified_model(simulation_dt):
     sim_dt = simulation_dt
-    km = 8.21688727e+00 * 400 #  * 1.1 
-    kt = 5.45036325e+01 * 125 # / 1.2
+    km = 8.21688727e+00 / 100 #* 400 #  * 1.1 
+    kt = 5.45036325e+01 /120 #* 50 # / 1.2
     m = 2.86717809e-02 
     cs = 1.35102053e+01 * 2 
     ks = 2.45926152e+02 * 1 
@@ -875,8 +876,9 @@ def create_rheopectic_modified_model(simulation_dt):
     c1 = 4.30490643e+01 
     lambda0 = 3.13209065e-01 
     F0 = 0
+    sg = 5
 
-    muscle_model = rheopectic_modified_hill_muscle_model(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,A,B,C,D,lambda0,F0,delta,sim_dt)
+    muscle_model = rheopectic_modified_hill_muscle_model(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,A,B,C,D,lambda0,F0,sg,delta,sim_dt)
     return muscle_model
 
 def rheopectic_modified_muscle_simulation():
@@ -944,5 +946,5 @@ if __name__=="__main__":
     #rheopectic_muscle_optimization()
     #modified_muscle_simulation()
     #modified_muscle_optimization()
-    rheopectic_modified_muscle_simulation()
-    #rheopectic_modified_muscle_optimization()
+    #rheopectic_modified_muscle_simulation()
+    rheopectic_modified_muscle_optimization()

@@ -12,6 +12,7 @@ from scipy.optimize import differential_evolution
 from scipy.optimize import brute
 import pandas as pd
 import scipy.signal as signal
+from scipy.optimize import NonlinearConstraint
 
 
 
@@ -91,7 +92,6 @@ def print_state(xk, convergence):
     X0 = muscle_model.get_X0()
     print(xk)
     fitted_muscle_data_1,[lm, dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
-    fitted_muscle_data_1,[lm, dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     plt.close('all')
     fig, axs = plt.subplots(1)
     axs.plot(time_vectors[2][0:int(0.95/muscle_model.sim_dt)], fitted_muscle_data_1[0:int(0.95/muscle_model.sim_dt)])
@@ -152,7 +152,10 @@ def prepare_reference_data(filenames,sim_dt):
 
 def muscle_identification(muscle_model,time_vector,active_force,reference_force,twitch_data,damping_ratio,damping_ration_margin,bounds,threads,disp_debug):
     x0 = muscle_model.get_parameters()
-    result = differential_evolution(objective,x0 = x0,args = (muscle_model, time_vector[2], active_force[2], reference_force[2]),constraints=(),bounds=bounds,workers = threads, disp = disp_debug,polish=False,callback=print_state)
+    
+    #constr = [{'type': 'ineq', 'fun' : lambda x : x[15]/x[14] - 10}]
+    constr = NonlinearConstraint(muscle_model.get_stiffness_ratio, 10, 100000)
+    result = differential_evolution(objective,x0 = x0,args = (muscle_model, time_vector[2], active_force[2], reference_force[2]),constraints=(constr),bounds=bounds,workers = threads, disp = disp_debug,polish=False,callback=print_state)
     return result
 
 def muscle_optimization():
@@ -281,14 +284,13 @@ def rheopectic_muscle_optimization():
     c1_bound = (0.1,100)
     c2_bound = (0.1,100)
     lambda0_bound = (0.1,1)
-    F0_bound = (-0.5,0.5)
     c_rh_min_bound = (muscle_model.c_rh_min/50,muscle_model.c_rh_min*50)
     
     c_rh_bound = (muscle_model.c_rh/100,muscle_model.c_rh*100)
     c1_bound = (muscle_model.c1/100,muscle_model.c1*100)
     #([  0.28579205, 109.77117007,   1.11604163,  19.96163719,
     #     1.44207403,   0.21671702])
-    bounds = (c_rh_bound,c_rh_min_bound,c1_bound,c2_bound,k1_bound,k2_bound,C_bound,D_bound,lambda0_bound,F0_bound)
+    bounds = (c_rh_bound,c_rh_min_bound,c1_bound,c2_bound,k1_bound,k2_bound,C_bound,D_bound,lambda0_bound)
     threads = 1
     damping_ratio = 1.
     damping_ratio_margin = 0.1
@@ -610,13 +612,12 @@ def modified_muscle_optimization():
     ls0_bound = (-0.5,0.5)
     FK_bound = (1,1200)
     Fdelta_bound = (0.001,1000)
-    F0_bound = (-1,1)
     twitch_duration_bound = (0.001,0.025)
     twitch_amplitude_bound = (0.01,100)
     twitch_delay_bound = (0,0.01)
     #bounds = (km_bound,kt_bound,m_bound,c_bound)
     #bounds = (km_bound,kt_bound,m_bound,c_bound,c1_bound,cs_bound,ks_bound,ls0_bound,F0_bound)
-    bounds = (c_bound,c1_bound,cs_bound,ks_bound,ls0_bound,F0_bound)
+    bounds = (c_bound,c1_bound,cs_bound,ks_bound,ls0_bound)
     threads = 12
     damping_ratio = 1.
     damping_ratio_margin = 0.1
@@ -691,39 +692,38 @@ def rheopectic_modified_muscle_optimization():
     muscle_model = create_rheopectic_modified_model(sim_dt)
 
     
-    c_rh_bound = (muscle_model.c_rh/10,muscle_model.c_rh*10)
-    c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
-    k1_bound = (muscle_model.k1/10,muscle_model.k1*10)
-    k2_bound = (muscle_model.k2/10,muscle_model.k2*10)
+    c_rh_bound = (muscle_model.c_rh/100,muscle_model.c_rh*100)
+    c1_bound = (muscle_model.c1/100,muscle_model.c1*100)
+    k1_bound = (muscle_model.k1/100,muscle_model.k1*100)
+    k2_bound = (muscle_model.k2/100,muscle_model.k2*100)
     A_bound = (muscle_model.A/10,muscle_model.A*10)
     B_bound = (muscle_model.B/10,muscle_model.B*10)
     C_bound = (muscle_model.C/10,muscle_model.C*10)
     D_bound = (muscle_model.D/10,muscle_model.D*10)
     #c0_bound = (0.1,100)
     lambda0_bound = (0.1,1)
-    F0_bound = (muscle_model.F0/10,muscle_model.F0*10)
-    cs_bound = (muscle_model.cs/10,muscle_model.cs*10)
-    c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
-    ks_bound = (muscle_model.ks/10,muscle_model.ks*10)
+    cs_bound = (muscle_model.cs/100,muscle_model.cs*100)
+    c1_bound = (muscle_model.c1/100,muscle_model.c1*100)
+    ks_bound = (muscle_model.ks/100,muscle_model.ks*100)
     c_rh_min_bound = (muscle_model.c_rh_min/10,muscle_model.c_rh_min*10)
 
-    km_bound = (muscle_model.km/10,muscle_model.km*10)
-    kt_bound = (muscle_model.kt/10,muscle_model.kt*10)
+    km_bound = (muscle_model.km/100,muscle_model.km*100)
+    kt_bound = (muscle_model.kt/100,muscle_model.kt*100)
     
     #c_rh_max_bound = (muscle_model.c_rh_max/100,muscle_model.c_rh_max*100)
     #c0_bound = (muscle_model.c0/100,muscle_model.c0*100)
-    ls0_bound = (muscle_model.ls0/10,muscle_model.ls0*10)
+    ls0_bound = (muscle_model.ls0/100,muscle_model.ls0*100)
     twitch_duration_bound = (0.001,0.012)
     twitch_amplitude_bound = (0.01,100)
-    sg_bound = (0.01,100)
+    F0_bound = (0,1)
     #km_bound = (0.1,5000)
     #kt_bound = (0.1,5000)
 
     #bounds = (min_c_bound,k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,max_c_bound)
     #bounds = (k1_bound,k2_bound, C_bound,D_bound,c0_bound,lambda0_bound,cs_bound,ks_bound,ls0_bound)
-    bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,F0_bound,km_bound,kt_bound,sg_bound)
+    bounds = (k1_bound,k2_bound,c_rh_bound, c_rh_min_bound,ls0_bound,c1_bound,cs_bound,ks_bound,lambda0_bound,A_bound,B_bound,C_bound,D_bound,km_bound,kt_bound,F0_bound)
     #bounds = (c1_bound, cs_bound,ks_bound)
-    threads = 4
+    threads = 12
     damping_ratio = 1.
     damping_ratio_margin = 0.1
 
@@ -859,7 +859,7 @@ def create_rheopectic_model(simulation_dt):
 def create_rheopectic_modified_model(simulation_dt):
     sim_dt = simulation_dt
     km = 8.21688727e+00 / 100 #* 400 #  * 1.1 
-    kt = 5.45036325e+01 /120 #* 50 # / 1.2
+    kt = 5.45036325e+01 * 100 #* 50 # / 1.2
     m = 2.86717809e-02 
     cs = 1.35102053e+01 * 2 
     ks = 2.45926152e+02 * 1 
@@ -874,11 +874,10 @@ def create_rheopectic_modified_model(simulation_dt):
     c_rh = 2.10558506e+01 
     c_rh_min = 1.0490643e+00 
     c1 = 4.30490643e+01 
-    lambda0 = 3.13209065e-01 
-    F0 = 0
-    sg = 5
+    lambda0 = 3.13209065e-01
+    F0 = 0.55
 
-    muscle_model = rheopectic_modified_hill_muscle_model(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,A,B,C,D,lambda0,F0,sg,delta,sim_dt)
+    muscle_model = rheopectic_modified_hill_muscle_model(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,A,B,C,D,lambda0,F0,delta,sim_dt)
     return muscle_model
 
 def rheopectic_modified_muscle_simulation():
@@ -894,10 +893,11 @@ def rheopectic_modified_muscle_simulation():
 
 
     muscle_model = create_rheopectic_modified_model(sim_dt)
-    muscle_model.set_parameters([4.13523050e+02,  2.92725296e+05,  1.03744710e+01,  7.71788172e+00,
-       -3.00236148e-04,  1.83037824e+02,  1.91310804e+02,  1.23245739e+03,
-        3.66355415e-01,  1.62732500e+00,  2.91315338e+00,  2.37848273e+01,
-        3.07559988e+00,  0.00000000e+00,  2.79310311e+03,  6.43633073e+03])
+
+
+
+
+  
 
     # prepare input data
     low_freq_duration = int((19 * ((1/low_frequency - sim_dt/1.5)))/sim_dt)
@@ -922,6 +922,8 @@ def rheopectic_modified_muscle_simulation():
     B, A = signal.butter(3, 0.003, output='ba')
     fig, axs = plt.subplots(2)
     axs[0].plot(time_vector, muscle_force)
+    #val = muscle_model.kt * np.sign(muscle_model.delta) * (np.abs(muscle_model.delta) **2) * muscle_model.output_gain
+    #axs[0].axhline(val)
     dlm_dt_temp = dlm_dt.copy()
     dlm_dt_temp[dlm_dt_temp<0] = 0
     #muscle_model.c_rh * Lambda * dlm_dt_temp

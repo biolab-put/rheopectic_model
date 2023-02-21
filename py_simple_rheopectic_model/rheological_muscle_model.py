@@ -109,3 +109,9 @@ class RheopecticMuscle():
         lm0 = self.get_initial_length()
         X0 = [lm0,0,self.lambda0,self.ls0]
         return X0
+       
+    @staticmethod
+    def get_stiffness_ratio(x):
+        km = x[0]
+        kt = x[1]
+        return kt/km

@@ -6,6 +6,7 @@ from scipy.optimize import differential_evolution
 import pandas as pd
 import scipy.signal as signal
 from scipy.optimize import NonlinearConstraint
+import warnings
 
 def load_data(filename):
     data = pd.read_csv(filename)
@@ -37,7 +38,7 @@ def create_rheopectic_model(simulation_dt):
     kt = 5.45036325e+01 * 100 #* 50 # / 1.2
     m = 2.86717809e-02 
     cs = 1.35102053e+01 * 2 
-    ks = 2.45926152e+02 * 1 
+    ks = 2.45926152e+02 / 2
     c1 = 2.30490643e+01 
     ls0 = -0.0001
     delta = 0.01
@@ -48,16 +49,31 @@ def create_rheopectic_model(simulation_dt):
     lambda0 = 3.13209065e-01
     F0 = 0.1
     s1 = 1
+    A = 0
+    B = 1
+    C = 1
+    D = 1
 
-    muscle_model = RheopecticMuscle(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,lambda0,F0,s1,delta,sim_dt)
+    F0 = 1.85784291e-01
+    ls0 = -5.02151168e-05
+    c_rh = 4.10786193e+01
+    k1 = 1.81617856e+02
+    k2 = 2.88005293e+05
+    A = 1.44236019e-03
+    B = 1.42824649e-02
+    C = 2.41322706e+00
+    D = 1.65376287e-02
+  
+    muscle_model = RheopecticMuscle(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,lambda0,F0,s1,A,B,C,D,delta,sim_dt)
     return muscle_model
 
 def muscle_identification(muscle_model,time_vector,active_force,reference_force,twitch_data,damping_ratio,damping_ration_margin,bounds,threads,disp_debug):
     x0 = muscle_model.get_parameters()
     
     #constr = [{'type': 'ineq', 'fun' : lambda x : x[15]/x[14] - 10}]
-    constr = NonlinearConstraint(muscle_model.get_stiffness_ratio, 10, 1e09)
-    result = differential_evolution(objective,x0 = x0,args = (muscle_model, time_vector[2], active_force[2], reference_force[2]),constraints=(constr),bounds=bounds,workers = threads, disp = disp_debug,polish=False,callback=print_state)
+    #constr = NonlinearConstraint(muscle_model.get_stiffness_ratio, 10, 1e09)
+    #init='sobol', mutation = (0.8,1.99),recombination = 0.5,
+    result = differential_evolution(objective,x0 = x0,updating='deferred', args = (muscle_model, time_vector[2], active_force[2], reference_force[2]),constraints=(),bounds=bounds,workers = threads, disp = disp_debug,polish=False,callback=print_state)
     return result
 
 def print_state(xk, convergence):
@@ -136,21 +152,30 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
     error = 0
     muscle_model.set_parameters(x)
     X0 = muscle_model.get_X0()
-    muscle_data,_ = muscle_model.muscle_response(X0,time_vector,active_force)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        muscle_data,_ = muscle_model.muscle_response(X0,time_vector,active_force)
     B, A = signal.butter(2, 0.003, output='ba')
     filtered_reference = signal.filtfilt(B,A,reference_force)
     filtered_estimated_force= signal.filtfilt(B,A,muscle_data)
     reference_force_derative = np.gradient(filtered_reference,muscle_model.sim_dt)
     estimated_force_derative = np.gradient(filtered_estimated_force,muscle_model.sim_dt)
 
-    #error += 1/len(reference_force) * np.sum((muscle_data-reference_force)**2)
+    #error += 1/len(reference_force) * np.sum(np.square(muscle_data-reference_force))
 
-    error += 1/len(reference_force) * np.sum((reference_force-muscle_data)**2)
-    error += 1/len(reference_force_derative) * np.sum((reference_force_derative-estimated_force_derative)**2)
-    error += 10/len(muscle_data) * np.sum((reference_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - muscle_data[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)])**2)
-    error += 10/len(reference_force_derative) * np.sum((reference_force_derative[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - estimated_force_derative[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)])**2)
+    #print('T',1/len(muscle_data) * np.sum(np.abs(reference_force-muscle_data)))
+    #print('dT', 1/len(reference_force_derative) * np.sum(np.abs(reference_force_derative-estimated_force_derative)))
 
-    error += (reference_force_derative[0] - estimated_force_derative[0])**2
+    #error += 1/len(muscle_data) * np.sum(np.abs(reference_force-muscle_data))
+    #error += 1/len(reference_force_derative) * np.sum(np.abs(reference_force_derative-estimated_force_derative))
+    #print('T',1/len(muscle_data) * np.sum(np.square(reference_force-muscle_data)))
+    #print('dT', 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative)))
+    error += 2/len(muscle_data) * np.sum(np.square(reference_force-muscle_data))
+    error += 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative))
+    error += 50/len(muscle_data) * np.sum(np.square(reference_force[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - muscle_data[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    error += 50/len(reference_force_derative) * np.sum(np.square(reference_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - estimated_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    #error += np.abs(reference_force_derative[0] - estimated_force_derative[0])
 
     #print(error)
 
@@ -167,6 +192,8 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
     #print('Err: ', error)
     #print('Derr: ', 1/len(reference_force_derative) * np.sum((reference_force_derative - estimated_force_derative)**2)*muscle_model.sim_dt)
     #error += 1/len(reference_force_derative) * np.sum((reference_force_derative - estimated_force_derative)**2)
+    #plt.plot(muscle_data)
+    #plt.show()
     return error
 
 def rheopectic_modified_muscle_optimization():
@@ -181,31 +208,51 @@ def rheopectic_modified_muscle_optimization():
 
     muscle_model = create_rheopectic_model(sim_dt)
 
+    '''
+    muscle_model.set_parameters([5.32115683e-01,  1.60129274e+04,  1.12552828e-01,  8.43101977e+01,
+  4.01817115e+02, -1.29976442e-05,  3.61406969e+01,  9.06659830e+00,
+  1.67369386e+02,  1.79641462e+02, 3.66644205e+04,  1.09005005e-01,
+  9.76748987e-01,  6.80306618e+00,0,1,1,1])
+    '''
+
+    '''
+    muscle_model.set_parameters([4.22373175e-01,  9.40432391e+03,  6.07586039e-02,  1.00437424e+02,
+  4.77759121e+02, -2.71193030e-05,  2.74153860e+01,  6.71883366e+00,
+  1.63673585e+02,  1.08105607e+02,  1.71409333e+05,  7.97352307e-01,
+  3.89195370e-01,  4.54208658e+00,  3.57400712e-01,  1.40096301e+00,
+  1.96667598e+00,  1.46217619e+00])
+  '''
+    X0 = muscle_model.get_X0()
     
-    c_rh_bound = (muscle_model.c_rh/10,muscle_model.c_rh*10)
+    
+    c_rh_bound = (muscle_model.c_rh/2,muscle_model.c_rh*2)
     c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
     k1_bound = (muscle_model.k1/10,muscle_model.k1*10)
     k2_bound = (muscle_model.k2/10,muscle_model.k2*10)
-    lambda0_bound = (0.1,1)
-    cs_bound = (muscle_model.cs/10,muscle_model.cs*10)
+    lambda0_bound = (0,1)
+    cs_bound = (muscle_model.cs/50,muscle_model.cs*50)
     c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
-    ks_bound = (muscle_model.ks/10,muscle_model.ks*10)
+    ks_bound = (muscle_model.ks/50,muscle_model.ks*50)
     c_rh_min_bound = (muscle_model.c_rh_min/10,muscle_model.c_rh_min*10)
     km_bound = (muscle_model.km/10,muscle_model.km*10)
     kt_bound = (muscle_model.kt/10,muscle_model.kt*10)
     
-    ls0_bound = (muscle_model.ls0/10,muscle_model.ls0*10)
-    F0_bound = (0,1)
+    ls0_bound = (-np.abs(muscle_model.ls0)*10,-np.abs(muscle_model.ls0)/10)
+    F0_bound = (0, 1)
     #km_bound = (0.001,50000)
     #kt_bound = (0.1,50000)
     s1_bound = (muscle_model.s1/10,muscle_model.s1*10)
     m_bound = (muscle_model.m/10,muscle_model.m*5)
-    bounds = (km_bound,kt_bound,m_bound,cs_bound,ks_bound,ls0_bound,c_rh_bound,c_rh_min_bound,c1_bound,k1_bound,k2_bound,lambda0_bound,F0_bound,s1_bound)
-
+    A_bound = (0,0.7)
+    B_bound = (0,3)
+    C_bound = (1,5)
+    D_bound = (0,3)
+    #bounds = (km_bound,kt_bound,m_bound,cs_bound,ks_bound,ls0_bound,c_rh_bound,c_rh_min_bound,c1_bound,k1_bound,k2_bound,lambda0_bound,F0_bound,s1_bound,A_bound,B_bound,C_bound,D_bound)
+    bounds = (F0_bound,ls0_bound,c_rh_bound,k1_bound,k2_bound,A_bound,B_bound,C_bound,D_bound,cs_bound,ks_bound)
     #print(muscle_model.get_parameters())
     #print(bounds)
     #exit()
-    threads = 12
+    threads = 8
     damping_ratio = 1.
     damping_ratio_margin = 0.1
 
@@ -247,7 +294,6 @@ def rheopectic_modified_muscle_optimization():
     
     # Get muscle response
 
-    X0 = muscle_model.get_X0()
     muscle_data,[lm,dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
 
     # Plot results
@@ -275,10 +321,10 @@ def rheopectic_modified_muscle_optimization():
     '''
 
     '''
-    #plt.plot(time_vectors[2], muscle_data)
-    #plt.plot(time_vectors[2], reference_forces[2])
-    plt.plot(time_vectors[2], estimated_force_derative)
-    plt.plot(time_vectors[2], reference_force_derative)
+    plt.plot(time_vectors[2], muscle_data)
+    plt.plot(time_vectors[2], reference_forces[2])
+    #plt.plot(time_vectors[2], estimated_force_derative)
+    #plt.plot(time_vectors[2], reference_force_derative)
 
     #plt.plot(Lambda)
     #plt.figure()
@@ -294,15 +340,15 @@ def rheopectic_modified_muscle_optimization():
     exit()
     '''
 
-    '''
+    
 
     # Muscle parameter search (optional)
-
+    '''
     p = muscle_model.get_parameters()
     for i in range(len(p)):
         print(i, len(p),p[i])
-        p[i] *= 10
-        print(p[0],p[i])
+        p[i] *= 5
+        #print(p[0],p[i])
         muscle_model.set_parameters(p)
         X0 = muscle_model.get_X0()
         muscle_data,[lm,dlm_dt, Lambda,ls] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])

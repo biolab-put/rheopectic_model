@@ -34,18 +34,18 @@ def prepare_reference_data(filenames,sim_dt):
 
 def create_rheopectic_model(simulation_dt):
     sim_dt = simulation_dt
-    km = 8.21688727e+00 / 100 #* 400 #  * 1.1 
+    km = 8.21688727e+00 / 100 #* 400 #  * 1.1
     kt = 5.45036325e+01 * 100 #* 50 # / 1.2
     m = 2.86717809e-02 
     cs = 1.35102053e+01 * 2 
     ks = 2.45926152e+02 / 2
-    c1 = 2.30490643e+01 
+    c1 = 2.30490643e+01 #* 1.5 #zmienione
     ls0 = -0.0001
     delta = 0.01
     k1 = 2.79147980e+02  / 15 #* 1.5
     k2 = 6.98119462e+03 * 5
-    c_rh = 2.10558506e+01 
-    c_rh_min = 1.0490643e+00 
+    c_rh = 2.10558506e+01
+    c_rh_min = 1.0490643e+00 #* 20 # zmienione
     lambda0 = 3.13209065e-01
     F0 = 0.1
     s1 = 1
@@ -54,17 +54,23 @@ def create_rheopectic_model(simulation_dt):
     C = 1
     D = 1
 
-    F0 = 1.85784291e-01
-    ls0 = -5.02151168e-05
-    c_rh = 4.10786193e+01
-    k1 = 1.81617856e+02
-    k2 = 2.88005293e+05
-    A = 1.44236019e-03
-    B = 1.42824649e-02
-    C = 2.41322706e+00
-    D = 1.65376287e-02
-  
-    muscle_model = RheopecticMuscle(km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,lambda0,F0,s1,A,B,C,D,delta,sim_dt)
+    F0 = 1.31464110e-03 #+ 0.5# 1.85784291e-01 / #zmienione
+    ls0 = -3.07434935e-05 #-5.02151168e-05
+    c_rh = 3.19620238e+01 #/ 50#4.10786193e+01 #zmienione
+    k1 = 1.63145870e+02 #1.81617856e+02
+    k2 = 8.29731547e+05 #2.88005293e+05 
+    A = 2.13863919e-02 #1.44236019e-03
+    B = 2.38930379e-02 #1.42824649e-02
+    C = 2.91578029e+00 #2.41322706e+00
+    D = 1.20478674e-02 #1.65376287e-02
+    cs = 1.66091677e+01
+    ks = 9.80018222e+01
+
+    # from manual tuning
+    params = [0.0013146411, -0.0001, 21.30801586666667, 358.92091400000004, 829731.547, 0.0213863919, 0.0238930379, 2.91578029, 0, 16.6091677, 98.0018222, 1.0490643, 19.207553583333336]
+    muscle_model = RheopecticMuscle(km,kt/2,m,cs,ks,-0.0001,c_rh / 1.5,c_rh_min  ,c1 / 1.2,k1 * 2.2,k2,lambda0,F0,s1,A,B,C,0,delta,sim_dt)
+    muscle_model.set_parameters(params)
+
     return muscle_model
 
 def muscle_identification(muscle_model,time_vector,active_force,reference_force,twitch_data,damping_ratio,damping_ration_margin,bounds,threads,disp_debug):
@@ -171,10 +177,25 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
     #error += 1/len(reference_force_derative) * np.sum(np.abs(reference_force_derative-estimated_force_derative))
     #print('T',1/len(muscle_data) * np.sum(np.square(reference_force-muscle_data)))
     #print('dT', 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative)))
-    error += 2/len(muscle_data) * np.sum(np.square(reference_force-muscle_data))
-    error += 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative))
-    error += 50/len(muscle_data) * np.sum(np.square(reference_force[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - muscle_data[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
-    error += 50/len(reference_force_derative) * np.sum(np.square(reference_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - estimated_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+
+    #error += 2/len(muscle_data) * np.sum(np.square(reference_force-muscle_data))
+    #error += 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative))
+    #error += 50/len(muscle_data) * np.sum(np.square(reference_force[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - muscle_data[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    #error += 50/len(reference_force_derative) * np.sum(np.square(reference_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - estimated_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    #error += 1500/len(muscle_data) * np.sum(np.square(reference_force[int(0.46/muscle_model.sim_dt):int(0.55/muscle_model.sim_dt)] - muscle_data[int(0.46/muscle_model.sim_dt):int(0.55/muscle_model.sim_dt)]))
+    
+
+    #error += 2/len(muscle_data) * np.sum(np.square(reference_force-muscle_data))
+    #error += 1/len(reference_force_derative) * np.sum(np.square(reference_force_derative-estimated_force_derative))
+    #error += 50/len(muscle_data) * np.sum(np.square(reference_force[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - muscle_data[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    #error += 50/len(reference_force_derative) * np.sum(np.square(reference_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - estimated_force_derative[int(1.05/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+    #error += 1500/len(muscle_data) * np.sum(np.square(reference_force[int(0.46/muscle_model.sim_dt):int(0.55/muscle_model.sim_dt)] - muscle_data[int(0.46/muscle_model.sim_dt):int(0.55/muscle_model.sim_dt)]))
+    
+    error += 10 * np.sqrt(np.sum(np.square(reference_force[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)] - muscle_data[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)])))
+    plt.plot(time_vector[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)], reference_force[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)])
+    plt.plot(time_vector[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)],muscle_data[int(0.95/muscle_model.sim_dt):int(1.5/muscle_model.sim_dt)])
+    plt.show()
+    #error += np.sqrt(np.sum(np.square(reference_force-muscle_data)))
     #error += np.abs(reference_force_derative[0] - estimated_force_derative[0])
 
     #print(error)
@@ -225,7 +246,7 @@ def rheopectic_modified_muscle_optimization():
     X0 = muscle_model.get_X0()
     
     
-    c_rh_bound = (muscle_model.c_rh/2,muscle_model.c_rh*2)
+    c_rh_bound = (muscle_model.c_rh/25,muscle_model.c_rh*25)
     c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
     k1_bound = (muscle_model.k1/10,muscle_model.k1*10)
     k2_bound = (muscle_model.k2/10,muscle_model.k2*10)
@@ -233,12 +254,12 @@ def rheopectic_modified_muscle_optimization():
     cs_bound = (muscle_model.cs/50,muscle_model.cs*50)
     c1_bound = (muscle_model.c1/10,muscle_model.c1*10)
     ks_bound = (muscle_model.ks/50,muscle_model.ks*50)
-    c_rh_min_bound = (muscle_model.c_rh_min/10,muscle_model.c_rh_min*10)
+    c_rh_min_bound = (muscle_model.c_rh_min/20,muscle_model.c_rh_min*20)
     km_bound = (muscle_model.km/10,muscle_model.km*10)
     kt_bound = (muscle_model.kt/10,muscle_model.kt*10)
     
     ls0_bound = (-np.abs(muscle_model.ls0)*10,-np.abs(muscle_model.ls0)/10)
-    F0_bound = (0, 1)
+    F0_bound = (0, 1.5)
     #km_bound = (0.001,50000)
     #kt_bound = (0.1,50000)
     s1_bound = (muscle_model.s1/10,muscle_model.s1*10)
@@ -248,11 +269,11 @@ def rheopectic_modified_muscle_optimization():
     C_bound = (1,5)
     D_bound = (0,3)
     #bounds = (km_bound,kt_bound,m_bound,cs_bound,ks_bound,ls0_bound,c_rh_bound,c_rh_min_bound,c1_bound,k1_bound,k2_bound,lambda0_bound,F0_bound,s1_bound,A_bound,B_bound,C_bound,D_bound)
-    bounds = (F0_bound,ls0_bound,c_rh_bound,k1_bound,k2_bound,A_bound,B_bound,C_bound,D_bound,cs_bound,ks_bound)
+    bounds = (F0_bound,ls0_bound,c_rh_bound,k1_bound,k2_bound,A_bound,B_bound,C_bound,D_bound,cs_bound,ks_bound,c_rh_min_bound,c1_bound)
     #print(muscle_model.get_parameters())
     #print(bounds)
     #exit()
-    threads = 8
+    threads = 1
     damping_ratio = 1.
     damping_ratio_margin = 0.1
 
@@ -320,7 +341,11 @@ def rheopectic_modified_muscle_optimization():
     plt.plot(time_vectors[2][int(1.395/muscle_model.sim_dt)::], reference_forces[2][int(1.395/muscle_model.sim_dt)::])
     '''
 
-    '''
+    #plt.plot(muscle_model.test)
+    #plt.show()
+    #print(muscle_model.test)
+    #print('ok')
+    #exit()
     plt.plot(time_vectors[2], muscle_data)
     plt.plot(time_vectors[2], reference_forces[2])
     #plt.plot(time_vectors[2], estimated_force_derative)
@@ -338,7 +363,7 @@ def rheopectic_modified_muscle_optimization():
     plt.legend(['Estimated force','Reference force'])
     plt.show()
     exit()
-    '''
+    
 
     
 

@@ -2,7 +2,7 @@ from scipy.integrate import ode
 import numpy as np
 
 class RheopecticMuscle():
-    def __init__(self, km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,lambda0,F0,s1,A,B,C,D, delta,sim_dt):
+    def __init__(self, km,kt,m,cs,ks,ls0,c_rh,c_rh_min,c1,k1,k2,lambda0,F0,s1,A,B,C,D, delta,act1,sim_dt):
         self.k1 = k1
         self.k2 = k2
         self.m = m
@@ -23,6 +23,7 @@ class RheopecticMuscle():
         self.B = B
         self.C = C
         self.D = D
+        self.act1 = act1
 
     def _get_dls_dt(self, current_ls, current_active_force):
         dls_dt = 1/self.cs * (-(self.ks * current_ls) + current_active_force)
@@ -35,9 +36,8 @@ class RheopecticMuscle():
         dGamma_dt = np.max([0,dlm_dt]) / self.s1
         dLambda_dt = - self.k1 * np.power(dGamma_dt,self.A) * np.power(Lambda,self.B) + self.k2 * np.power(dGamma_dt,self.C) * np.power(1-Lambda,self.D)
         rheopectic_force = self.c_rh * dGamma_dt * (np.square(self.s1)) * (Lambda)
-        dls_dt = self._get_dls_dt(ls,active_force[int(t/self.sim_dt)])
-        d2lm_dt = 1/self.m*(-(rheopectic_force + self.c_rh_min * dlm_dt + self.c1 * dls_dt) - self.km*(np.sign(lm) * np.square(lm))+self.kt*(np.sign(self.delta-lm)* (np.square(self.delta - lm)))-active_force[int(t/self.sim_dt)] - self.F0)
-
+        dls_dt = self._get_dls_dt(ls,self.act1 * active_force[int(t/self.sim_dt)])
+        d2lm_dt = 1/self.m*(-(rheopectic_force + self.c_rh_min * dlm_dt + self.c1 * dls_dt) - self.km*(np.sign(lm) * np.square(lm)) +self.kt*(np.sign(self.delta-lm)* (np.square(self.delta - lm)))-self.act1*active_force[int(t/self.sim_dt)] - self.F0)
         return [dlm_dt,d2lm_dt,dLambda_dt,dls_dt]
 
     def muscle_response(self,X0,time_vector,active_force):
@@ -55,14 +55,16 @@ class RheopecticMuscle():
             except AssertionError as e:
                 solution = np.zeros((len(X0),len(time_vector)))
                 break
-        estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * (np.square(np.abs(self.delta - solution[0,:]))) * 0.1
-        #estimated_force = self.kt * (np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) ** (1)) + np.sign(self.delta - solution[0,:]) * (np.abs(self.delta - solution[0,:]) ** (1))) * 10
+ 
+        solution[0,:] = np.clip(solution[0,:],0,solution[0,0]) # limitize so the muscle can not be elongated more than initially
+        # Muscle length signal does not start with 0, but do not change it before calculating estimated force
+        # because it should take into account delta - lm, it should depend as a non linear output from delta value
+        estimated_force = self.kt * np.sign(self.delta - solution[0,:]) * (np.square(np.abs(self.delta - solution[0,:])))
         estimated_force = estimated_force - estimated_force[0]
-        estimated_force = np.clip(estimated_force,0,None)
+        
         return estimated_force,solution
 
     def set_parameters(self,x):
-        '''
         self.km = x[0]
         self.kt = x[1]
         self.m = x[2]
@@ -81,38 +83,33 @@ class RheopecticMuscle():
         self.B = x[15]
         self.C = x[16]
         self.D = x[17]
-        '''
-        self.F0 = x[0]
-        self.ls0 = x[1]
-        self.c_rh = x[2]
-        self.k1 = x[3]
-        self.k2 = x[4]
-        self.A = x[5]
-        self.B = x[6]
-        self.C = x[7]
-        self.D = x[8]
-        self.cs = x[9]
-        self.ks = x[10]
+        self.act1 = x[18]
 
     def get_parameters(self):
-        #x = [self.km, self.kt,self.m ,self.cs,self.ks,self.ls0,self.c_rh,self.c_rh_min,self.c1,self.k1,self.k2,self.lambda0,self.F0,self.s1,self.A,self.B,self.C,self.D]
-        x = [self.F0,self.ls0, self.c_rh, self.k1 ,self.k2,self.A ,self.B,self.C,self.D,self.cs,self.ks]
+        x = [self.km, self.kt,self.m ,self.cs,self.ks,self.ls0,self.c_rh,self.c_rh_min,self.c1,self.k1,self.k2,self.lambda0,self.F0,self.s1,self.A,self.B,self.C,self.D,self.act1]
         return x
 
     def get_initial_length(self):
         dls0 = self._get_dls_dt(self.ls0,0)
         a = self.kt - self.km
-        b = 2 * self.kt * self.delta
+        b = -2 * self.kt * self.delta
         c = self.kt*(np.square(self.delta)) - self.c1 * dls0 - self.F0
         quadratic_discriminant = np.square(b) - 4 * a * c
         lm01 = (-b + np.sqrt(quadratic_discriminant)) / (2 * a)
         lm02 = (-b - np.sqrt(quadratic_discriminant)) / (2 * a)
-        if((lm01 > 0 and lm02 > 0) or (lm01 < 0 and lm02 < 0)):
+        #if((lm01 > 0 and lm02 > 0) or (lm01 < 0 and lm02 < 0)):
+        #    return False
+
+        if(lm01 < 0 and lm02 < 0):
             return False
-        if (lm01 > 0):
+        if(lm01 < lm02):
             return lm01
-        if (lm02 > 0):
+        else:
             return lm02
+        #if (lm01 > 0):
+        #    return lm01
+        #if (lm02 > 0):
+        #    return lm02
 
     def get_X0(self):
         lm0 = self.get_initial_length()

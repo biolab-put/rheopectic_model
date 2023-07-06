@@ -360,7 +360,7 @@ def rheopectic_modified_muscle_optimization():
     #exit()
     #print(lm)
 
-    '''
+    
     # Plot results
     #plt.plot(time_vectors[2], rh)
     plt.plot(time_vectors[2], muscle_data)
@@ -371,7 +371,7 @@ def rheopectic_modified_muscle_optimization():
     plt.legend(['Estimated force','Reference force'])
     plt.show()
     exit()
-    '''
+    
 
     # Muscle parameter search (optional)
     '''

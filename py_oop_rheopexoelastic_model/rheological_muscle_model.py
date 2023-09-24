@@ -83,7 +83,17 @@ class RheopecticMuscle():
 
         #if(np.isnan(lm)):
         #    exit()
-        d2lm_dt = 1/self.m*(-rh - self.km * (np.sign(lm) * lm) + self.kt*(np.sign(self.delta-lm)* (self.delta - lm))-np.max([0,active_force[int(t/self.sim_dt)]]))
+
+
+        if(self.K == 0 or self.Beta == 0):
+            f_visco = c_rh*dlm_dt
+        else:
+            #f_visco = rh
+            # based on: https://www.sciencedirect.com/science/article/abs/pii/S0001868608001735?via%3Dihub
+            #f_visco = rh + self.c_rh_min*dlm_dt + c_rh*dlm_dt
+            f_visco = rh + self.c_rh_min*dlm_dt + Lambda*self.c_rh_min*dlm_dt
+        #d2lm_dt = 1/self.m*(-rh - self.km * (np.sign(lm) * lm) + self.kt*(np.sign(self.delta-lm)* (self.delta - lm))-np.max([0,active_force[int(t/self.sim_dt)]]))
+        d2lm_dt = 1/self.m*(-f_visco - self.km * (np.sign(lm) * lm) + self.kt*(np.sign(self.delta-lm)* (self.delta - lm))-np.max([0,active_force[int(t/self.sim_dt)]]))
         #d2lm_dt = 1/self.m*(-(rheopectic_force) - self.km*lm +self.kt*(self.delta - lm)-active_force[int(t/self.sim_dt)])
         #d2lm_dt = 1/self.m*(-rheopectic_force - self.km*lm - self.kt*(lm)-active_force[int(t/self.sim_dt)])
 

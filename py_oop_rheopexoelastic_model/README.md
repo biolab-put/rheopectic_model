@@ -16,6 +16,8 @@ analysis](https://www.sciencedirect.com/science/article/pii/S0020746223001038)
 [THIXOTROPIC-VISCOELASTIC RHEOLOGICAL FINGERPRINTS IN LARGE 
 AMPLITUDE OSCILLATORY SHEAR](https://core.ac.uk/download/pdf/17355558.pdf)
 
+[Rheological modelling of complex fluids: IV: Thixotropic and “thixoelastic” behaviour. Start-up and stress relaxation, creep tests and hysteresis cycles]([https://core.ac.uk/download/pdf/17355558.pdf](https://www.cambridge.org/core/journals/the-european-physical-journal-applied-physics/article/abs/rheological-modelling-of-complex-fluids-iv-thixotropic-and-thixoelastic-behaviour-startup-and-stress-relaxation-creep-tests-and-hysteresis-cycles/D506017E2D145396DFFB2844230307A3)https://www.cambridge.org/core/journals/the-european-physical-journal-applied-physics/article/abs/rheological-modelling-of-complex-fluids-iv-thixotropic-and-thixoelastic-behaviour-startup-and-stress-relaxation-creep-tests-and-hysteresis-cycles/D506017E2D145396DFFB2844230307A3)
+
 Rheological modelling of complex fluids:
 IV: Thixotropic and “thixoelastic” behaviour. Start-up
 and stress relaxation, creep tests and hysteresis cycles (6.1 Predictions of the thixoelastic Maxwell-Jeffreys

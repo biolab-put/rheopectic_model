@@ -1,10 +1,15 @@
 The "rheopexo-elastic" model connects:
-- Quemada model as a inelastic structural-kinetic rheological model with viscosity equation allowing to select between rheopectic (also thixotropic) and Newtonian behaviour [1]
+- Quemada model as a inelastic structural-kinetic rheological model with viscosity equation allowing to select between rheopectic (also thixotropic) and Newtonian behaviour [0,1]
 - Maxwell model for elastic component [2]
 
 
 References:
 
+[0] Basic information about inelastic/elastic thixotropy and rheopexy
+
+[Thixotropy](https://www.sciencedirect.com/science/article/abs/pii/S0001868608001735?via%3Dihub)
+
+[WANG, Yilin; EWOLDT, Randy H. Distinguishing thixotropy, anti-thixotropy, and viscoelasticity using hysteresis. arXiv preprint arXiv:2212.07572, 2022.](https://arxiv.org/abs/2212.07572)
 
 [1] Model for Lambda and rheopectic behaviour:
 

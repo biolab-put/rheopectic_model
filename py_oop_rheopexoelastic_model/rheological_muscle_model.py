@@ -25,7 +25,7 @@ class RheopecticMuscle():
         self.A = A
         self.B = B
         self.G0 = G0
-        self.rh0 = 0
+        self.rh0 = 0.01
         self.rh_lambda_b = 0.54
         self.rh_lambda_c = 0.1
 

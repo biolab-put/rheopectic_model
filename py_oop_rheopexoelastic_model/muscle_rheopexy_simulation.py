@@ -486,7 +486,10 @@ def rheopectic_modified_muscle_optimization():
     # ----------------------
     X0 = muscle_model.get_X0()
     # load reference data
-    filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_11','947kLHLf/947kLHLf_trial_17']
+    #filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_11','947kLHLf/947kLHLf_trial_17']
+    #filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_11','947kLHLf/947kLHLf_trial_14']
+    filenames = ['947kLHLf/947kLHLf_trial_04','947kLHLf/947kLHLf_trial_11','947kLHLf/947kLHLf_trial_14']
+    # 947kLHLf/947kLHLf_trial_20
     #filenames = ['1006j_trial_04','1006j_trial_09','1006j_trial_15']
     
     reference_force_0 = prepare_reference_data_in(filenames[0],sim_dt,steady_time=0.075,zeros_time=3.5)
@@ -579,13 +582,13 @@ def rheopectic_modified_muscle_optimization():
 
     '''
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_vectors[1], rh)
+    axs[0].plot(time_vectors[1], muscle_data)
     axs[0].plot(time_vectors[1], reference_forces[1]['force'])
     axs[0].set_title('Muscle force 1')
     axs[1].plot(time_vectors[1], Lambda)
     muscle_data,[lm,dlm_dt, Lambda,rh] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     fig_1, axs_1 = plt.subplots(2)
-    axs_1[0].plot(time_vectors[2], rh)
+    axs_1[0].plot(time_vectors[2], muscle_data)
     axs_1[0].plot(time_vectors[2], reference_forces[2]['force'])
     axs_1[0].set_title('Muscle force 2')
     axs_1[1].plot(time_vectors[2], Lambda)

@@ -128,19 +128,36 @@ def create_rheopectic_model(simulation_dt):
   2.44572117e+02,  0.65,  0.45,  5.29830111e+00,
   6.77148652e-01  ])
   '''
+    '''
     muscle_model.km = 6.72302051e+02
     muscle_model.kt = 7.72387498e+03
     muscle_model.m = 9.05419739e-03
-    muscle_model.c_rh_min = 0.25
-    muscle_model.c_rh_max = 8.86757828e+01
-    muscle_model.tr = 5.63322811e+01
-    muscle_model.Beta = -7.89866267e+00
+    muscle_model.c_rh_min = 0.01 *100
+    muscle_model.c_rh_max = 8.86757828e+01 * 5
+    muscle_model.tr = 10.63322811e+01
+    muscle_model.Beta = -9.89866267e+00
     muscle_model.k1 = 3.92390766e+02
-    muscle_model.k2 = 2.44572117e+04 # zmiana k2 do e+06
+    muscle_model.k2 = 2.44572117e+02 # zmiana k2 do e+06
     muscle_model.A = 0.55 # 0.53
     muscle_model.B = 0.94 # 1.5
     muscle_model.G0 = 5.29830111e+00 # 15.29830111e+00
     muscle_model.lambda0 = 6.77148652e-01
+    '''
+
+    muscle_model.km = 6.72302051e+02
+    muscle_model.kt = 7.72387498e+03
+    muscle_model.m = 9.05419739e-03
+    muscle_model.c_rh_min = 0.01 *10
+    muscle_model.c_rh_max = 8.86757828e+01 * 5
+    muscle_model.tr = 7.63322811e+01
+    muscle_model.Beta = -9.89866267e+00
+    muscle_model.k1 = 3.92390766e+02
+    muscle_model.k2 = 2.44572117e+04#2.44572117e+02 # zmiana k2 do e+06
+    muscle_model.A = 0.55 # 0.53
+    muscle_model.B = 0.94 # 1.5
+    muscle_model.G0 = 5.29830111e+00 # 15.29830111e+00
+    muscle_model.lambda0 = 6.77148652e-01
+
     
     # Zmiana 1 na 0.45
     return muscle_model
@@ -338,12 +355,14 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
                     #error += np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
                     error += std_forces_error
                     
-                    error += 40 * np.sum(np.square(filtered_reference[int(0.9/muscle_model.sim_dt):int(1.0/muscle_model.sim_dt)] - filtered_estimated_force[int(0.9/muscle_model.sim_dt):int(1.0/muscle_model.sim_dt)]))
+                    error += 40 * np.sum(np.square(filtered_reference[int(0.9/muscle_model.sim_dt):int(1.3/muscle_model.sim_dt)] - filtered_estimated_force[int(0.9/muscle_model.sim_dt):int(1.3/muscle_model.sim_dt)]))
+                    #print('Muscle 1 full error: ',error)
+                    #print('Muscle 1 undershoot error: ',40 * np.sum(np.square(filtered_reference[int(0.9/muscle_model.sim_dt):int(1.0/muscle_model.sim_dt)] - filtered_estimated_force[int(0.9/muscle_model.sim_dt):int(1.0/muscle_model.sim_dt)])))
                     #print('Err 1: ', error)
                     #error += 40 * np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
                     #error += 85 * np.sum(np.square(reference_force[i]['force'][0:int(0.04/muscle_model.sim_dt)] - muscle_data[0:int(0.04/muscle_model.sim_dt)]))d
                 if( i == 2):
-                    
+                    test = error
                     error += np.sum(np.square(filtered_reference - filtered_estimated_force))
                     
                     reference_force_std_window = np.lib.stride_tricks.sliding_window_view(reference_force[i]['force'], 100)
@@ -351,11 +370,14 @@ def objective(x,muscle_model,time_vector, active_force,reference_force):
 
                     estimated_force_std_window = np.lib.stride_tricks.sliding_window_view(muscle_data, 100)
                     estimated_force_mstd = savgol_filter(np.std(estimated_force_std_window, axis=-1),250,3)
-                    std_forces_error = 10 * np.sum(np.square(reference_force_mstd - estimated_force_mstd))
+                    std_forces_error = 2 * np.sum(np.square(reference_force_mstd - estimated_force_mstd))
                     #error += np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
                     error += std_forces_error
 
-                    error += 50 * np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+                    error += 40 * np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)]))
+                    #print('Muscle 2 full error: ',error - test)
+                    #print('Muscle 2 undershoot error: ',50 * np.sum(np.square(filtered_reference[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)] - filtered_estimated_force[int(1.0/muscle_model.sim_dt):int(1.25/muscle_model.sim_dt)])))
+                    #exit()
                     #error += 85/1.2 * np.sum(np.square(reference_force[i]['force'][0:int(0.04/muscle_model.sim_dt)] - muscle_data[0:int(0.04/muscle_model.sim_dt)]))
                 #print('Err 2: ', error - temp_err)
     #input_1 = muscle_active_force.parabolic_twitches(reference_force['stimDig'],twitch_duration,twitch_delay,twitch_amplitude, 0.0001)
@@ -424,27 +446,27 @@ def rheopectic_modified_muscle_optimization():
     sim_dt = 0.0001
 
          
-    twitch_duration =  2.13684632e-02#1.93976525e-02#2.13684632e-02#1.94042729e-02 #2.05572168e-02  #1.53709415e-02  #2.06812073e-02 #2.05572168e-02#2.05572168e-02#1.94042729e-02 # #1.87171287e-02#1.08064681e-02 ##7.43693943e-03#1.87171287e-02 #1.34594494e-02  #1.87171287e-02 #1.806677132e-02 #1.38720902e-02 #5.00338638e-03
+    twitch_duration =  0.02 #2.13684632e-02#1.93976525e-02#2.13684632e-02#1.94042729e-02 #2.05572168e-02  #1.53709415e-02  #2.06812073e-02 #2.05572168e-02#2.05572168e-02#1.94042729e-02 # #1.87171287e-02#1.08064681e-02 ##7.43693943e-03#1.87171287e-02 #1.34594494e-02  #1.87171287e-02 #1.806677132e-02 #1.38720902e-02 #5.00338638e-03
     twitch_delay = 5.41840492e-03#2.71686679e-03#5.41840492e-03#2.08183690e-03#2.05624797e-03#4.82148830e-03#2.04295978e-03#2.05624797e-03#2.05624797e-03#2.08183690e-03##2.47903488e-03#4.79517954e-03##3.30621295e-03#2.47903488e-03#5.84467490e-03#2.47903488e-03 #2.39753708e-03 #2.17465697e-03 #2.08550640e-03
     twitch_frequency = 40 #input 1a
     low_frequency = 35 #input 1
     high_frequency = 75
-    twitch_amplitude =  8.62972358e-02 #7.08897978e-02  #8.62972358e-02#6.99678867e-02  #6.80343112e-02  #1.20664179e-01#6.48254423e-02  #6.80343112e-02 #6.80343112e-02#6.99678867e-02 # #7.18294449e-02#1.38797015e-01 ##1.23989518e+00#7.18294449e-02#1.33077709e+00#7.18294449e-02 #1/14 #1.06935107e-01 #1.34342082e-01
+    twitch_amplitude =  6.62972358e-02 #7.08897978e-02  #8.62972358e-02#6.99678867e-02  #6.80343112e-02  #1.20664179e-01#6.48254423e-02  #6.80343112e-02 #6.80343112e-02#6.99678867e-02 # #7.18294449e-02#1.38797015e-01 ##1.23989518e+00#7.18294449e-02#1.33077709e+00#7.18294449e-02 #1/14 #1.06935107e-01 #1.34342082e-01
     disp_debug = True
     muscle_model = create_rheopectic_model(sim_dt)
     threads = 8
     X0 = muscle_model.get_X0()
-    c_rh_min_bound = (0.1,8)
-    c_rh_max_bound = (10,150)
-    k1_bound = (0.001,900)
-    k2_bound = (0.001,900)
+    c_rh_min_bound = (0.1,1000)
+    c_rh_max_bound = (1000,100000)
+    k1_bound = (0.001,90000)
+    k2_bound = (0.001,90000)
     lambda0_bound = (0.1,1)
     km_bound = (0.01,10000)
     kt_bound = (0.01,100000)
     m_bound = (0.0001, 0.01)
-    A_bound = (0,7)
-    B_bound = (0,7)
-    tr_bound = (0.0001,80) # (0.01,200)
+    A_bound = (0.1,3)
+    B_bound = (0.1,3)
+    tr_bound = (0.1,80) # (0.01,200)
     #act1_bound = (muscle_model.act1,muscle_model.act1)
     #K_bound = (0.01,50)
     Beta_bound = (-20,-0.01)
@@ -452,7 +474,7 @@ def rheopectic_modified_muscle_optimization():
     twitch_duration_bound = (0.005,0.022)
     twitch_amplitude_bound = (0.001,2)
     twitch_delay_bound = (0.002,0.006)
-    G0_bound = (0.01,25)
+    G0_bound = (0.01,15)
     rh_lambda_b_bound = (0.4,0.8)
     rh_lambda_c_bound = (0.1,0.2)
     bounds = (km_bound,kt_bound,m_bound,c_rh_min_bound,c_rh_max_bound,tr_bound,Beta_bound,k1_bound,k2_bound,A_bound,B_bound,G0_bound,lambda0_bound,twitch_duration_bound,twitch_amplitude_bound,twitch_delay_bound)
@@ -555,23 +577,23 @@ def rheopectic_modified_muscle_optimization():
     #exit()
     #print(lm)
 
-    
+    '''
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_vectors[1], muscle_data)
+    axs[0].plot(time_vectors[1], rh)
     axs[0].plot(time_vectors[1], reference_forces[1]['force'])
     axs[0].set_title('Muscle force 1')
     axs[1].plot(time_vectors[1], Lambda)
     muscle_data,[lm,dlm_dt, Lambda,rh] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     fig_1, axs_1 = plt.subplots(2)
-    axs_1[0].plot(time_vectors[2], muscle_data)
+    axs_1[0].plot(time_vectors[2], rh)
     axs_1[0].plot(time_vectors[2], reference_forces[2]['force'])
     axs_1[0].set_title('Muscle force 2')
     axs_1[1].plot(time_vectors[2], Lambda)
     plt.show()
     exit()
-    
-    
     '''
+    
+    
     # Plot results
     plt.figure()
     #plt.plot(time_vectors[1], rh)
@@ -585,7 +607,7 @@ def rheopectic_modified_muscle_optimization():
     #plt.show()
 
     muscle_data,[lm,dlm_dt, Lambda,rh] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
-
+    
     plt.figure()
     #plt.ylim([0.97,1])
     #plt.plot(time_vectors[2], rh)
@@ -597,7 +619,7 @@ def rheopectic_modified_muscle_optimization():
     plt.legend(['Estimated force 2','Reference force 2'])
     plt.show()
     exit()
-    '''
+    
 
     # Muscle parameter search (optional)
     '''

@@ -25,7 +25,7 @@ class RheopecticMuscle():
         self.A = A
         self.B = B
         self.G0 = G0
-        self.rh0 = 0.01
+        self.rh0 = 0#0.005 # 0.01
         self.rh_lambda_b = 0.54
         self.rh_lambda_c = 0.1
 
@@ -46,16 +46,17 @@ class RheopecticMuscle():
             Lambda = 0.0
         elif Lambda > 1:
             Lambda = 1.0
+        '''
         if lm < 0:
             lm = 0.0
         elif lm > X0[0]:
             lm = X0[0]
-        
+        '''
         #Lambda = 0
         #lm = np.clip(lm,0,X0[0])
         #lm = np.max([0,np.min([lm,X0[0]])])
-        if((lm <= 0 and dlm_dt < 0) or (lm >= X0[0] and dlm_dt > 0)):
-            dlm_dt = 0
+        #if((lm <= 0 and dlm_dt < 0) or (lm >= X0[0] and dlm_dt > 0)):
+        #    dlm_dt = 0
         #dGamma_dt = np.max([0,dlm_dt]) / self.s1
         #dGamma_dt = np.abs(np.min([dlm_dt,0])) #/ 1 #self.s1
         dGamma_dt = dlm_dt
@@ -96,6 +97,7 @@ class RheopecticMuscle():
             initial_force = self.kt * np.sign(self.delta - X0[0]) * (np.abs(self.delta - X0[0]))
             c = (self.c_rh_max - self.c_rh_min)*(1 - np.exp(-((current_muscle_force-initial_force) / 0.01)**2)) + self.c_rh_min 
             #c = -1 * ((self.c_rh_max - self.c_rh_min)*(1 - np.exp(-((current_muscle_force-initial_force) / 0.01)**2)) - self.c_rh_max) 
+            c = (self.c_rh_max - self.c_rh_min)*(1 - np.exp(-((Lambda) / 0.69)**80)) + self.c_rh_min
             
             f_visco = rh + 0*200* self.c_rh_min*dlm_dt + 0*c * dlm_dt #+ c_rh*dlm_dt
             #f_visco = 0*rh + self.c_rh_min*dlm_dt + Lambda*self.c_rh_min*dGamma_dt

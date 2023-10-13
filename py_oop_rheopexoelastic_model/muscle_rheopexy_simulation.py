@@ -593,7 +593,10 @@ def rheopectic_modified_muscle_optimization():
     st = time.time()
     muscle_data,[lm,dlm_dt, Lambda,rh] = muscle_model.muscle_response(X0,time_vectors[2],active_forces[2])
     print('Time', time.time()-st)
+    plt.plot(time_vectors[2],muscle_data)
+    plt.show()
 
+    '''
     time_vector_test = np.linspace(0, 5*len(reference_forces[2]['force'])*sim_dt-sim_dt, 5*len(reference_forces[2]['force']))
     for i in range(8):
         low_freq = 25+5*i
@@ -611,10 +614,14 @@ def rheopectic_modified_muscle_optimization():
     plt.ylabel('Muscle force [s]')
     plt.legend()
     plt.show()
+    '''
 
     for i in range(8):
         low_freq = 25+5*i
-        input_signal,high_frequency_stimulus_start_time,second_low_frequency_stimulus_start_time,last_stimulus_time = generate_in(time_vectors[2],low_freq,13+4*i,74.62686567,23,sim_dt)
+        low_stimuli_duration = (1/25) * 13
+        low_freq_stimulis = int(np.rint(low_stimuli_duration * low_freq))
+        #low_freq_stimulis = 13+4*i # that was before
+        input_signal,high_frequency_stimulus_start_time,second_low_frequency_stimulus_start_time,last_stimulus_time = generate_in(time_vectors[2],low_freq,low_freq_stimulis,74.62686567,23,sim_dt)
         input_signal = muscle_active_force.parabolic_twitches(input_signal,twitch_duration,twitch_delay,twitch_amplitude, sim_dt)
         muscle_data,[lm,dlm_dt, Lambda,rh] = muscle_model.muscle_response(X0,time_vectors[2],input_signal)
         lmin, lmax = hl_envelopes_idx(muscle_data)
@@ -626,6 +633,7 @@ def rheopectic_modified_muscle_optimization():
     plt.xlabel('Time [s]')
     plt.ylabel('Muscle force [s]')
     plt.legend()
+    plt.grid()
     plt.show()
     exit()
 
